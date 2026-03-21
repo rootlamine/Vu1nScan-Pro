@@ -1,0 +1,117 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum ScanStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum Severity {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum ReportFormat {
+  PDF
+  JSON
+}
+
+enum ModuleStatus {
+  PENDING
+  RUNNING
+  DONE
+  ERROR
+}
+
+model User {
+  id           String   @id @default(uuid())
+  username     String   @unique
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(USER)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  scans        Scan[]
+}
+
+model Scan {
+  id              String             @id @default(uuid())
+  userId          String
+  user            User               @relation(fields: [userId], references: [id])
+  targetUrl       String
+  description     String?
+  status          ScanStatus         @default(PENDING)
+  depth           String             @default("normal")
+  threads         Int                @default(5)
+  startedAt       DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime           @default(now())
+  vulnerabilities Vulnerability[]
+  moduleResults   ScanModuleResult[]
+  report          Report?
+}
+
+model Vulnerability {
+  id             String   @id @default(uuid())
+  scanId         String
+  scan           Scan     @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  name           String
+  severity       Severity
+  cvssScore      Float?
+  cveId          String?
+  endpoint       String?
+  parameter      String?
+  description    String
+  payload        String?
+  recommendation String
+  createdAt      DateTime @default(now())
+}
+
+model ScanModule {
+  id             String             @id @default(uuid())
+  name           String
+  slug           String             @unique
+  description    String
+  isActive       Boolean            @default(true)
+  defaultEnabled Boolean            @default(true)
+  results        ScanModuleResult[]
+}
+
+model ScanModuleResult {
+  id            String       @id @default(uuid())
+  scanId        String
+  scan          Scan         @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  moduleId      String
+  module        ScanModule   @relation(fields: [moduleId], references: [id])
+  status        ModuleStatus @default(PENDING)
+  executionTime Int?
+  rawOutput     String?
+  createdAt     DateTime     @default(now())
+
+  @@unique([scanId, moduleId])
+}
+
+model Report {
+  id          String       @id @default(uuid())
+  scanId      String       @unique
+  scan        Scan         @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  format      ReportFormat @default(PDF)
+  filePath    String
+  fileSize    Int?
+  generatedAt DateTime     @default(now())
+}

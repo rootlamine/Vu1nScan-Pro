@@ -1,0 +1,147 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+require("dotenv/config");
+const client_1 = require("@prisma/client");
+const bcryptjs_1 = __importDefault(require("bcryptjs"));
+const prisma = new client_1.PrismaClient();
+async function main() {
+    console.log('🌱 Démarrage du seed VulnScan Pro...\n');
+    // ── 1. Comptes utilisateurs ────────────────────────────────────────────────
+    const adminHash = await bcryptjs_1.default.hash('Admin@2026', 10);
+    const demoHash = await bcryptjs_1.default.hash('Demo@2026', 10);
+    const admin = await prisma.user.upsert({
+        where: { email: 'admin@vulnscan.io' },
+        update: {},
+        create: { username: 'admin', email: 'admin@vulnscan.io', passwordHash: adminHash, role: 'ADMIN' },
+    });
+    const demoUser = await prisma.user.upsert({
+        where: { email: 'demo@vulnscan.io' },
+        update: {},
+        create: { username: 'demo', email: 'demo@vulnscan.io', passwordHash: demoHash },
+    });
+    console.log(`✅ Utilisateurs : ${admin.email} (ADMIN), ${demoUser.email} (USER)`);
+    // ── 2. Modules de scan ─────────────────────────────────────────────────────
+    const modulesData = [
+        { slug: 'http_headers', name: 'En-têtes HTTP', description: "Vérifie la présence des en-têtes de sécurité HTTP (CSP, HSTS, X-Frame-Options...)" },
+        { slug: 'sql_injection', name: 'Injection SQL', description: "Détecte les vulnérabilités d'injection SQL via des payloads sur les paramètres GET" },
+        { slug: 'xss_scanner', name: 'Cross-Site Scripting', description: "Détecte les vulnérabilités XSS réfléchi dans les formulaires et paramètres URL" },
+        { slug: 'port_scanner', name: 'Scan de ports', description: "Analyse les ports TCP ouverts et évalue l'exposition réseau du serveur" },
+    ];
+    const modules = [];
+    for (const m of modulesData) {
+        const mod = await prisma.scanModule.upsert({
+            where: { slug: m.slug },
+            update: {},
+            create: { ...m, isActive: true, defaultEnabled: true },
+        });
+        modules.push(mod);
+    }
+    console.log(`✅ Modules : ${modules.map(m => m.slug).join(', ')}`);
+    // ── 3. Scans de démonstration ──────────────────────────────────────────────
+    // Scan 1 — testphp.vulnweb.com (COMPLETED, beaucoup de vulnérabilités)
+    const scan1 = await prisma.scan.create({
+        data: {
+            userId: demoUser.id, targetUrl: 'http://testphp.vulnweb.com',
+            description: 'Site de test OWASP officiel — résultats de démonstration',
+            status: 'COMPLETED', depth: 'normal',
+            startedAt: new Date(Date.now() - 3600_000), completedAt: new Date(Date.now() - 3500_000),
+        },
+    });
+    for (const mod of modules) {
+        await prisma.scanModuleResult.create({
+            data: { scanId: scan1.id, moduleId: mod.id, status: 'DONE', executionTime: Math.floor(Math.random() * 8000) + 2000 },
+        });
+    }
+    await prisma.vulnerability.createMany({
+        data: [
+            { scanId: scan1.id, name: 'Injection SQL détectée', severity: 'CRITICAL', cvssScore: 9.8,
+                endpoint: 'http://testphp.vulnweb.com/listproducts.php', parameter: 'cat',
+                description: "Injection SQL confirmée via le paramètre 'cat'. Le payload provoque un message d'erreur MySQL révélant la technologie de base de données.",
+                payload: "' OR '1'='1' --",
+                recommendation: "Utiliser des requêtes préparées (prepared statements). Ne jamais concaténer les entrées utilisateur dans les requêtes SQL." },
+            { scanId: scan1.id, name: 'Injection SQL détectée', severity: 'CRITICAL', cvssScore: 9.8,
+                endpoint: 'http://testphp.vulnweb.com/artists.php', parameter: 'artist',
+                description: "Injection SQL confirmée via le paramètre 'artist'.",
+                payload: "'",
+                recommendation: "Utiliser des requêtes préparées." },
+            { scanId: scan1.id, name: 'Cross-Site Scripting (XSS) réfléchi', severity: 'HIGH', cvssScore: 7.2,
+                endpoint: 'http://testphp.vulnweb.com/search.php', parameter: 'test',
+                description: "Le paramètre 'test' réfléchit le payload XSS sans encodage HTML, permettant l'exécution de code JavaScript arbitraire.",
+                payload: '<script>alert(1)</script>',
+                recommendation: "Encoder toutes les sorties HTML avec htmlspecialchars(). Implémenter une CSP stricte." },
+            { scanId: scan1.id, name: 'En-tête Content-Security-Policy manquant', severity: 'HIGH', cvssScore: 7.5,
+                endpoint: 'http://testphp.vulnweb.com',
+                description: "L'en-tête Content-Security-Policy (CSP) est absent. Cela expose l'application aux attaques XSS.",
+                recommendation: "Configurer une politique CSP stricte : Content-Security-Policy: default-src 'self'" },
+            { scanId: scan1.id, name: 'Port MySQL exposé (3306/tcp)', severity: 'CRITICAL', cvssScore: 9.8,
+                endpoint: 'testphp.vulnweb.com:3306',
+                description: "MySQL (port 3306) est accessible depuis l'extérieur. La base de données ne devrait jamais être exposée sur Internet.",
+                recommendation: "Fermer le port 3306 dans le pare-feu. Restreindre l'accès aux IP internes." },
+            { scanId: scan1.id, name: 'En-tête HSTS manquant', severity: 'MEDIUM', cvssScore: 6.1,
+                endpoint: 'http://testphp.vulnweb.com',
+                description: "L'en-tête HTTP Strict Transport Security (HSTS) est absent.",
+                recommendation: "Ajouter : Strict-Transport-Security: max-age=31536000; includeSubDomains" },
+            { scanId: scan1.id, name: 'En-tête X-Frame-Options manquant', severity: 'MEDIUM', cvssScore: 5.4,
+                endpoint: 'http://testphp.vulnweb.com',
+                description: "L'en-tête X-Frame-Options est absent, ce qui permet le clickjacking.",
+                recommendation: "Ajouter : X-Frame-Options: DENY" },
+            { scanId: scan1.id, name: 'En-tête X-Content-Type-Options manquant', severity: 'LOW', cvssScore: 3.7,
+                endpoint: 'http://testphp.vulnweb.com',
+                description: "L'en-tête X-Content-Type-Options est absent.",
+                recommendation: "Ajouter : X-Content-Type-Options: nosniff" },
+        ],
+    });
+    console.log(`✅ Scan 1 créé (8 vulnérabilités) : ${scan1.targetUrl}`);
+    // Scan 2 — demo.testfire.net (COMPLETED, quelques vulnérabilités)
+    const scan2 = await prisma.scan.create({
+        data: {
+            userId: admin.id, targetUrl: 'http://demo.testfire.net',
+            status: 'COMPLETED', depth: 'fast',
+            startedAt: new Date(Date.now() - 7200_000), completedAt: new Date(Date.now() - 7100_000),
+        },
+    });
+    for (const mod of modules) {
+        await prisma.scanModuleResult.create({
+            data: { scanId: scan2.id, moduleId: mod.id, status: 'DONE', executionTime: Math.floor(Math.random() * 5000) + 1000 },
+        });
+    }
+    await prisma.vulnerability.createMany({
+        data: [
+            { scanId: scan2.id, name: 'En-tête HSTS manquant', severity: 'MEDIUM', cvssScore: 6.1,
+                endpoint: 'http://demo.testfire.net',
+                description: "L'en-tête HSTS est absent.", recommendation: "Ajouter Strict-Transport-Security." },
+            { scanId: scan2.id, name: 'Port HTTP alternatif ouvert (8080/tcp)', severity: 'MEDIUM', cvssScore: 5.3,
+                endpoint: 'demo.testfire.net:8080',
+                description: "Port 8080 ouvert, peut exposer une interface d'administration.",
+                recommendation: "Fermer le port si non nécessaire." },
+        ],
+    });
+    console.log(`✅ Scan 2 créé (2 vulnérabilités) : ${scan2.targetUrl}`);
+    // Scan 3 — FAILED
+    const scan3 = await prisma.scan.create({
+        data: {
+            userId: demoUser.id, targetUrl: 'http://target-inaccessible.example.com',
+            description: 'Scan de démonstration — cible inaccessible',
+            status: 'FAILED', depth: 'normal',
+            startedAt: new Date(Date.now() - 86400_000), completedAt: new Date(Date.now() - 86280_000),
+        },
+    });
+    for (const mod of modules) {
+        await prisma.scanModuleResult.create({
+            data: { scanId: scan3.id, moduleId: mod.id, status: 'ERROR' },
+        });
+    }
+    console.log(`✅ Scan 3 créé (FAILED) : ${scan3.targetUrl}`);
+    console.log('\n✅ Seed terminé avec succès !');
+    console.log('──────────────────────────────────────────');
+    console.log('  ADMIN : admin@vulnscan.io / Admin@2026');
+    console.log('  USER  : demo@vulnscan.io  / Demo@2026');
+    console.log('──────────────────────────────────────────\n');
+}
+main()
+    .catch((e) => { console.error('❌ Erreur seed :', e); process.exit(1); })
+    .finally(() => prisma.$disconnect());
+//# sourceMappingURL=seed.js.map
