@@ -4,7 +4,7 @@ export type ScanStatus      = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED';
 export type Severity        = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
 export type ModuleStatus    = 'PENDING' | 'RUNNING' | 'DONE' | 'ERROR';
 export type UserRole        = 'USER' | 'ADMIN';
-export type ModuleCategory  = 'SECURITY' | 'NETWORK' | 'OSINT' | 'SCRAPING';
+export type ModuleCategory  = 'SECURITY' | 'NETWORK' | 'OSINT' | 'SCRAPING' | 'WEB_OFFENSIVE' | 'API_OFFENSIVE' | 'NETWORK_OFFENSIVE' | 'SYSTEM';
 
 // ─── Entities ─────────────────────────────────────────────────────────────────
 
@@ -65,6 +65,17 @@ export interface Vulnerability {
   recommendation: string;
   references:     string[];
   createdAt:      string;
+}
+
+export interface ScanProfile {
+  id:          string;
+  userId:      string;
+  name:        string;
+  description: string | null;
+  modules:     string[];
+  isDefault:   boolean;
+  createdAt:   string;
+  updatedAt:   string;
 }
 
 export interface Report {

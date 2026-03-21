@@ -20,6 +20,7 @@ export const createScanSchema = z.object({
   description: z.string().max(500).optional(),
   depth:       z.enum(['fast', 'normal', 'deep']).default('normal'),
   threads:     z.number().int().min(1).max(20).default(5),
+  moduleIds:   z.array(z.string().uuid()).optional(),
 });
 
 export async function createScan(req: Request, res: Response, next: NextFunction): Promise<void> {

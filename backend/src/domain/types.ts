@@ -36,6 +36,7 @@ export interface CreateScanDTO {
   description?: string;
   depth?: string;
   threads?: number;
+  moduleIds?: string[];
 }
 
 export interface ScanJobData {

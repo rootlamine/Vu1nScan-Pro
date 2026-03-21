@@ -4,12 +4,13 @@ import cors    from 'cors';
 import helmet  from 'helmet';
 import morgan  from 'morgan';
 
-import authRoutes   from '@/routes/auth.routes';
-import scanRoutes   from '@/routes/scan.routes';
-import vulnRoutes   from '@/routes/vuln.routes';
-import moduleRoutes from '@/routes/module.routes';
-import reportRoutes from '@/routes/report.routes';
-import adminRoutes  from '@/routes/admin.routes';
+import authRoutes    from '@/routes/auth.routes';
+import scanRoutes    from '@/routes/scan.routes';
+import vulnRoutes    from '@/routes/vuln.routes';
+import moduleRoutes  from '@/routes/module.routes';
+import reportRoutes  from '@/routes/report.routes';
+import adminRoutes   from '@/routes/admin.routes';
+import profileRoutes from '@/routes/profile.routes';
 import { errorHandler } from '@/middlewares/error-handler';
 
 // Démarre le BullMQ worker (désactivé en mode test)
@@ -37,8 +38,9 @@ app.use('/api/auth',            authRoutes);
 app.use('/api/scans',           scanRoutes);
 app.use('/api/vulnerabilities', vulnRoutes);
 app.use('/api/modules',         moduleRoutes);
-app.use('/api/reports', reportRoutes);
-app.use('/api/admin',   adminRoutes);
+app.use('/api/reports',   reportRoutes);
+app.use('/api/admin',     adminRoutes);
+app.use('/api/profiles',  profileRoutes);
 
 // ─── 404 ──────────────────────────────────────────────────────────────────────
 app.use((_req, res) => {

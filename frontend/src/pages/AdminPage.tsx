@@ -350,14 +350,25 @@ export default function AdminPage() {
         {tab === 'modules' && (() => {
           const MOD_PAGE_SIZE = 8;
           const CAT_TABS: { key: 'ALL' | ModuleCategory; label: string; color: string }[] = [
-            { key: 'ALL',      label: 'Tous',      color: '#7C6FF7' },
-            { key: 'SECURITY', label: 'Sécurité',  color: '#FF6B6B' },
-            { key: 'NETWORK',  label: 'Réseau',    color: '#4ECDC4' },
-            { key: 'OSINT',    label: 'OSINT',     color: '#7C6FF7' },
-            { key: 'SCRAPING', label: 'Scraping',  color: '#FFB347' },
+            { key: 'ALL',              label: 'Tous',           color: '#7C6FF7' },
+            { key: 'SECURITY',         label: 'Sécurité',       color: '#FF6B6B' },
+            { key: 'WEB_OFFENSIVE',    label: 'Web Offensif',   color: '#E05252' },
+            { key: 'API_OFFENSIVE',    label: 'API Offensif',   color: '#C0392B' },
+            { key: 'NETWORK',          label: 'Réseau',         color: '#4ECDC4' },
+            { key: 'NETWORK_OFFENSIVE',label: 'Réseau Offensif',color: '#2E86AB' },
+            { key: 'OSINT',            label: 'OSINT',          color: '#7C6FF7' },
+            { key: 'SCRAPING',         label: 'Scraping',       color: '#FFB347' },
+            { key: 'SYSTEM',           label: 'Système',        color: '#8E44AD' },
           ];
           const CAT_BG: Record<string, string> = {
-            SECURITY: '#FFF0F0', NETWORK: '#E8FFFE', OSINT: '#F0EEFF', SCRAPING: '#FFF8ED',
+            SECURITY:          '#FFF0F0',
+            NETWORK:           '#E8FFFE',
+            OSINT:             '#F0EEFF',
+            SCRAPING:          '#FFF8ED',
+            WEB_OFFENSIVE:     '#FFE8E8',
+            API_OFFENSIVE:     '#FFE0E0',
+            NETWORK_OFFENSIVE: '#E0F0FF',
+            SYSTEM:            '#F5E6FF',
           };
 
           const q = modSearch.toLowerCase();
@@ -409,10 +420,14 @@ export default function AdminPage() {
               {/* Counter + view toggle */}
               {(() => {
                 const CAT_ICON: Record<string, React.ReactNode> = {
-                  SECURITY: <Shield size={18} />,
-                  NETWORK:  <Wifi   size={18} />,
-                  OSINT:    <Globe  size={18} />,
-                  SCRAPING: <Search size={18} />,
+                  SECURITY:          <Shield size={18} />,
+                  NETWORK:           <Wifi   size={18} />,
+                  OSINT:             <Globe  size={18} />,
+                  SCRAPING:          <Search size={18} />,
+                  WEB_OFFENSIVE:     <Shield size={18} />,
+                  API_OFFENSIVE:     <Globe  size={18} />,
+                  NETWORK_OFFENSIVE: <Wifi   size={18} />,
+                  SYSTEM:            <Search size={18} />,
                 };
                 return (
                   <>

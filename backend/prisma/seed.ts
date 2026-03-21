@@ -30,36 +30,56 @@ async function main() {
   // ── 2. Modules de scan ─────────────────────────────────────────────────────
   const modulesData = [
     // ── Sécurité ───────────────────────────────────────────────────────────
-    { slug: 'sql_injection',            name: 'Injection SQL',              category: 'SECURITY', description: "Injecte des payloads dans les paramètres GET/POST. Détecte les erreurs SQL et comportements anormaux." },
-    { slug: 'xss_scanner',              name: 'Cross-Site Scripting',       category: 'SECURITY', description: "Teste les formulaires HTML et les paramètres URL pour le Cross-Site Scripting réfléchi." },
-    { slug: 'ssl_checker',              name: 'SSL/TLS Checker',            category: 'SECURITY', description: "Vérifie le certificat SSL/TLS (expiration, version TLS, chiffrements faibles)." },
-    { slug: 'csrf_scanner',             name: 'CSRF Scanner',               category: 'SECURITY', description: "Détecte l'absence de token CSRF dans les formulaires POST et les cookies sans SameSite." },
-    { slug: 'directory_traversal',      name: 'Directory Traversal',        category: 'SECURITY', description: "Teste les vulnérabilités de type path traversal (../../etc/passwd) sur les paramètres." },
-    { slug: 'open_redirect',            name: 'Open Redirect',              category: 'SECURITY', description: "Détecte les redirections ouvertes non validées exploitables pour le phishing." },
-    { slug: 'security_misconfiguration',name: 'Security Misconfiguration',  category: 'SECURITY', description: "Détecte les pages admin exposées (/admin, /phpmyadmin, /.env, /.git, phpinfo)." },
-    { slug: 'sensitive_files',          name: 'Sensitive Files',            category: 'SECURITY', description: "Détecte les fichiers sensibles exposés (backup.zip, .env, config.php, dump.sql)." },
+    { slug: 'sql_injection',            name: 'Injection SQL',              category: 'SECURITY',          description: "Injecte des payloads dans les paramètres GET/POST. Détecte les erreurs SQL et comportements anormaux." },
+    { slug: 'xss_scanner',              name: 'Cross-Site Scripting',       category: 'SECURITY',          description: "Teste les formulaires HTML et les paramètres URL pour le Cross-Site Scripting réfléchi." },
+    { slug: 'ssl_checker',              name: 'SSL/TLS Checker',            category: 'SECURITY',          description: "Vérifie le certificat SSL/TLS (expiration, version TLS, chiffrements faibles)." },
+    { slug: 'csrf_scanner',             name: 'CSRF Scanner',               category: 'SECURITY',          description: "Détecte l'absence de token CSRF dans les formulaires POST et les cookies sans SameSite." },
+    { slug: 'directory_traversal',      name: 'Directory Traversal',        category: 'SECURITY',          description: "Teste les vulnérabilités de type path traversal (../../etc/passwd) sur les paramètres." },
+    { slug: 'open_redirect',            name: 'Open Redirect',              category: 'SECURITY',          description: "Détecte les redirections ouvertes non validées exploitables pour le phishing." },
+    { slug: 'security_misconfiguration',name: 'Security Misconfiguration',  category: 'SECURITY',          description: "Détecte les pages admin exposées (/admin, /phpmyadmin, /.env, /.git, phpinfo)." },
+    { slug: 'sensitive_files',          name: 'Sensitive Files',            category: 'SECURITY',          description: "Détecte les fichiers sensibles exposés (backup.zip, .env, config.php, dump.sql)." },
     // ── Réseau ────────────────────────────────────────────────────────────
-    { slug: 'port_scanner',             name: 'Scan de ports',              category: 'NETWORK',  description: "Connexion TCP sur 20 ports communs (MySQL, Redis, RDP, SMB...). Évalue l'exposition réseau." },
-    { slug: 'http_headers',             name: 'En-têtes HTTP',              category: 'NETWORK',  description: "Vérifie la présence de CSP, HSTS, X-Frame-Options, X-Content-Type-Options et Referrer-Policy." },
+    { slug: 'port_scanner',             name: 'Scan de ports',              category: 'NETWORK',           description: "Connexion TCP sur 20 ports communs (MySQL, Redis, RDP, SMB...). Évalue l'exposition réseau." },
+    { slug: 'http_headers',             name: 'En-têtes HTTP',              category: 'NETWORK',           description: "Vérifie la présence de CSP, HSTS, X-Frame-Options, X-Content-Type-Options et Referrer-Policy." },
     // ── OSINT ─────────────────────────────────────────────────────────────
-    { slug: 'whois_lookup',             name: 'WHOIS Lookup',               category: 'OSINT',    description: "Récupère les informations WHOIS publiques du domaine (registrar, dates, nameservers, pays)." },
-    { slug: 'dns_recon',                name: 'DNS Reconnaissance',         category: 'OSINT',    description: "Énumère les enregistrements DNS (A, MX, NS, TXT) et détecte les transferts de zone ouverts." },
-    { slug: 'subdomain_enum',           name: 'Énumération sous-domaines',  category: 'OSINT',    description: "Énumère les sous-domaines courants (www, mail, api, admin...) et résout leurs adresses IP." },
-    { slug: 'email_harvester',          name: 'Email Harvester',            category: 'OSINT',    description: "Scrape les adresses email exposées sur le site web cible (HTML, pages contact, métadonnées)." },
-    { slug: 'technology_fingerprint',   name: 'Tech Fingerprinting',        category: 'OSINT',    description: "Détecte les technologies utilisées : CMS, frameworks, serveurs, langages, CDN et analytics." },
-    { slug: 'google_dorks',             name: 'Google Dorks',               category: 'OSINT',    description: "Génère des dorks de recherche (filetype:pdf, inurl:admin, intext:password) sur le domaine cible." },
+    { slug: 'whois_lookup',             name: 'WHOIS Lookup',               category: 'OSINT',             description: "Récupère les informations WHOIS publiques du domaine (registrar, dates, nameservers, pays)." },
+    { slug: 'dns_recon',                name: 'DNS Reconnaissance',         category: 'OSINT',             description: "Énumère les enregistrements DNS (A, MX, NS, TXT) et détecte les transferts de zone ouverts." },
+    { slug: 'subdomain_enum',           name: 'Énumération sous-domaines',  category: 'OSINT',             description: "Énumère les sous-domaines courants (www, mail, api, admin...) et résout leurs adresses IP." },
+    { slug: 'email_harvester',          name: 'Email Harvester',            category: 'OSINT',             description: "Scrape les adresses email exposées sur le site web cible (HTML, pages contact, métadonnées)." },
+    { slug: 'technology_fingerprint',   name: 'Tech Fingerprinting',        category: 'OSINT',             description: "Détecte les technologies utilisées : CMS, frameworks, serveurs, langages, CDN et analytics." },
+    { slug: 'google_dorks',             name: 'Google Dorks',               category: 'OSINT',             description: "Génère des dorks de recherche (filetype:pdf, inurl:admin, intext:password) sur le domaine cible." },
     // ── Scraping ──────────────────────────────────────────────────────────
-    { slug: 'metadata_extractor',       name: 'Metadata Extractor',         category: 'SCRAPING', description: "Extrait les métadonnées des PDF et images (auteurs, logiciels, chemins internes, dates)." },
-    { slug: 'broken_links',             name: 'Broken Links',               category: 'SCRAPING', description: "Crawl le site et détecte les liens cassés (404, 500) selon la profondeur configurée." },
-    { slug: 'javascript_analyzer',      name: 'JavaScript Analyzer',        category: 'SCRAPING', description: "Analyse les fichiers JS : API keys, tokens AWS/Google, JWTs, endpoints cachés, commentaires sensibles." },
+    { slug: 'metadata_extractor',       name: 'Metadata Extractor',         category: 'SCRAPING',          description: "Extrait les métadonnées des PDF et images (auteurs, logiciels, chemins internes, dates)." },
+    { slug: 'broken_links',             name: 'Broken Links',               category: 'SCRAPING',          description: "Crawl le site et détecte les liens cassés (404, 500) selon la profondeur configurée." },
+    { slug: 'javascript_analyzer',      name: 'JavaScript Analyzer',        category: 'SCRAPING',          description: "Analyse les fichiers JS : API keys, tokens AWS/Google, JWTs, endpoints cachés, commentaires sensibles." },
+    // ── Offensif Web ──────────────────────────────────────────────────────
+    { slug: 'lfi_rfi_scanner',          name: 'LFI/RFI Scanner',            category: 'WEB_OFFENSIVE',     description: "Teste les vulnérabilités LFI/RFI en injectant ../../etc/passwd dans les paramètres GET/POST. CVSS 9.0 CRITICAL." },
+    { slug: 'xxe_scanner',              name: 'XXE Scanner',                category: 'WEB_OFFENSIVE',     description: "Injecte des payloads XXE dans les formulaires et endpoints XML/JSON. CVSS 8.2 HIGH." },
+    { slug: 'ssrf_scanner',             name: 'SSRF Scanner',               category: 'WEB_OFFENSIVE',     description: "Teste les redirections vers 169.254.169.254, localhost, 127.0.0.1. Détecte les SSRF. CVSS 8.6 HIGH." },
+    { slug: 'command_injection',        name: 'Command Injection',          category: 'WEB_OFFENSIVE',     description: "Injecte ; ls, && id, | whoami dans les paramètres. Détecte les injections OS. CVSS 9.8 CRITICAL." },
+    { slug: 'http_methods_scanner',     name: 'HTTP Methods Scanner',       category: 'WEB_OFFENSIVE',     description: "Teste PUT DELETE TRACE CONNECT OPTIONS sur le serveur. Détecte les méthodes dangereuses activées. CVSS 6.5 MEDIUM." },
+    // ── Offensif API ──────────────────────────────────────────────────────
+    { slug: 'api_fuzzer',               name: 'API Fuzzer',                 category: 'API_OFFENSIVE',     description: "Fuzz /api/v1/, /graphql, /swagger, /admin sans token. Détecte les endpoints exposés. CVSS 8.0 HIGH." },
+    { slug: 'broken_auth_api',          name: 'Broken Auth API',            category: 'API_OFFENSIVE',     description: "Teste IDOR sur /api/users/1-2, accès sans token, tokens expirés. CVSS 8.8 HIGH." },
+    { slug: 'graphql_introspection',    name: 'GraphQL Introspection',      category: 'API_OFFENSIVE',     description: "POST {__schema{types{name}}} sur /graphql. Détecte l'introspection activée. CVSS 5.3 MEDIUM." },
+    { slug: 'rate_limit_tester',        name: 'Rate Limit Tester',          category: 'API_OFFENSIVE',     description: "Envoie 20 requêtes rapides sur /api/auth/login. Détecte l'absence de rate limiting. CVSS 5.3 MEDIUM." },
+    // ── Offensif Réseau ───────────────────────────────────────────────────
+    { slug: 'banner_grabbing',          name: 'Banner Grabbing',            category: 'NETWORK_OFFENSIVE', description: "Connexion TCP sur ports ouverts, récupère les banners et détecte les versions exposées. CVSS 5.0 MEDIUM." },
+    { slug: 'firewall_detection',       name: 'Firewall/WAF Detection',     category: 'NETWORK_OFFENSIVE', description: "Détecte WAF via headers (X-Sucuri, CF-RAY, X-Powered-By-Plesk). Analyse blocage de payloads. CVSS 4.0 MEDIUM." },
+    { slug: 'traceroute_analysis',      name: 'Traceroute Analysis',        category: 'NETWORK_OFFENSIVE', description: "Traceroute vers la cible, compte les hops, révèle la topologie réseau. CVSS 3.0 LOW." },
+    { slug: 'ipv6_scanner',             name: 'IPv6 Scanner',               category: 'NETWORK_OFFENSIVE', description: "Résout AAAA, scanne les ports IPv6. Détecte les expositions IPv6 non protégées. CVSS 4.5 MEDIUM." },
+    // ── Système ───────────────────────────────────────────────────────────
+    { slug: 'os_fingerprint',           name: 'OS Fingerprinting',          category: 'SYSTEM',            description: "Analyse TTL (64=Linux, 128=Windows), headers Server, X-Powered-By pour identifier l'OS. CVSS 3.7 LOW." },
+    { slug: 'service_version_scan',     name: 'Service Version Scan',       category: 'SYSTEM',            description: "Récupère les versions services, interroge NVD API pour les CVEs connus. CVSS 7.5 HIGH." },
+    { slug: 'default_credentials',      name: 'Default Credentials',        category: 'SYSTEM',            description: "Teste admin/admin, root/root, admin/password sur HTTP Basic Auth et formulaires login. CVSS 9.8 CRITICAL." },
   ];
 
   const modules = [];
   for (const m of modulesData) {
     const mod = await prisma.scanModule.upsert({
       where:  { slug: m.slug },
-      update: { name: m.name, description: m.description, category: m.category as 'SECURITY'|'NETWORK'|'OSINT'|'SCRAPING' },
-      create: { slug: m.slug, name: m.name, description: m.description, category: m.category as 'SECURITY'|'NETWORK'|'OSINT'|'SCRAPING', isActive: true, defaultEnabled: true },
+      update: { name: m.name, description: m.description, category: m.category as 'SECURITY'|'NETWORK'|'OSINT'|'SCRAPING'|'WEB_OFFENSIVE'|'API_OFFENSIVE'|'NETWORK_OFFENSIVE'|'SYSTEM' },
+      create: { slug: m.slug, name: m.name, description: m.description, category: m.category as 'SECURITY'|'NETWORK'|'OSINT'|'SCRAPING'|'WEB_OFFENSIVE'|'API_OFFENSIVE'|'NETWORK_OFFENSIVE'|'SYSTEM', isActive: true, defaultEnabled: true },
     });
     modules.push(mod);
   }
@@ -178,6 +198,87 @@ async function main() {
     });
   }
   console.log(`✅ Scan 3 créé (FAILED) : ${scan3.targetUrl}`);
+
+  // ── 4. Profils de scan par défaut ──────────────────────────────────────────
+
+  const PROFILE_RECON = [
+    'whois_lookup', 'dns_recon', 'subdomain_enum',
+    'email_harvester', 'technology_fingerprint',
+    'http_headers', 'port_scanner',
+  ];
+
+  const PROFILE_WEB = [
+    'http_headers', 'sql_injection', 'xss_scanner',
+    'csrf_scanner', 'directory_traversal', 'open_redirect',
+    'security_misconfiguration', 'sensitive_files',
+    'ssl_checker', 'lfi_rfi_scanner', 'xxe_scanner',
+    'ssrf_scanner', 'command_injection', 'http_methods_scanner',
+  ];
+
+  const PROFILE_API = [
+    'api_fuzzer', 'broken_auth_api', 'graphql_introspection',
+    'rate_limit_tester', 'http_methods_scanner', 'ssl_checker',
+  ];
+
+  const PROFILE_OSINT = [
+    'whois_lookup', 'dns_recon', 'subdomain_enum',
+    'email_harvester', 'technology_fingerprint',
+    'google_dorks', 'metadata_extractor',
+  ];
+
+  const ALL_SLUGS = modules.map(m => m.slug);
+
+  const profilesData = [
+    {
+      name: 'Reconnaissance',
+      description: 'OSINT et reconnaissance réseau — profil par défaut non intrusif.',
+      modules: PROFILE_RECON,
+      isDefault: true,
+    },
+    {
+      name: 'Web Scan Complet',
+      description: 'Analyse complète de la sécurité web : injections, headers, SSL, LFI, XXE, SSRF.',
+      modules: PROFILE_WEB,
+      isDefault: false,
+    },
+    {
+      name: 'API Security',
+      description: 'Audit de sécurité des APIs REST et GraphQL : fuzzing, auth, rate limiting.',
+      modules: PROFILE_API,
+      isDefault: false,
+    },
+    {
+      name: 'OSINT Complet',
+      description: 'Collecte maximale d\'informations publiques : WHOIS, DNS, emails, dorks, métadonnées.',
+      modules: PROFILE_OSINT,
+      isDefault: false,
+    },
+    {
+      name: 'Audit Complet',
+      description: 'Tous les 35 modules activés — audit de sécurité exhaustif.',
+      modules: ALL_SLUGS,
+      isDefault: false,
+    },
+  ];
+
+  for (const user of [admin, demoUser]) {
+    for (const profile of profilesData) {
+      await prisma.scanProfile.upsert({
+        where: {
+          userId_name: { userId: user.id, name: profile.name },
+        },
+        update: { modules: profile.modules, description: profile.description },
+        create: {
+          userId: user.id,
+          name: profile.name,
+          description: profile.description,
+          modules: profile.modules,
+          isDefault: profile.isDefault,
+        },
+      });
+    }
+  }
+  console.log(`✅ Profils de scan créés pour admin et demo (${profilesData.length} profils)`);
 
   console.log('\n✅ Seed terminé avec succès !');
   console.log('──────────────────────────────────────────');

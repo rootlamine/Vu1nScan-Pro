@@ -42,18 +42,23 @@ enum ModuleCategory {
   NETWORK
   OSINT
   SCRAPING
+  WEB_OFFENSIVE
+  API_OFFENSIVE
+  NETWORK_OFFENSIVE
+  SYSTEM
 }
 
 model User {
-  id           String   @id @default(uuid())
-  username     String   @unique
-  email        String   @unique
+  id           String        @id @default(uuid())
+  username     String        @unique
+  email        String        @unique
   passwordHash String
-  role         Role     @default(USER)
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  role         Role          @default(USER)
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
   scans        Scan[]
+  profiles     ScanProfile[]
 }
 
 model Scan {
@@ -123,4 +128,18 @@ model Report {
   filePath    String
   fileSize    Int?
   generatedAt DateTime     @default(now())
+}
+
+model ScanProfile {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  modules     String[]
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, name])
 }

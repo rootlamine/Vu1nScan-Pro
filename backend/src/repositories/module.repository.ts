@@ -7,6 +7,10 @@ export class ModuleRepository implements IModuleRepository {
     return prisma.scanModule.findMany({ where: { isActive: true } });
   }
 
+  async findByIds(ids: string[]): Promise<ScanModule[]> {
+    return prisma.scanModule.findMany({ where: { id: { in: ids }, isActive: true } });
+  }
+
   async findBySlug(slug: string): Promise<ScanModule | null> {
     return prisma.scanModule.findUnique({ where: { slug } });
   }

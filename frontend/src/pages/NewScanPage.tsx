@@ -3,14 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft, Shield, ChevronDown, ChevronUp, Play,
   BookmarkIcon, AlertTriangle, CheckCircle2, Clock, Search,
+  Bookmark, X, ChevronDown as ChevDown,
 } from 'lucide-react';
 import { Layout } from '@/components/ui/Layout';
 import api from '@/services/api';
-import type { ScanModule, ModuleCategory } from '@/types';
+import type { ScanModule, ModuleCategory, ScanProfile } from '@/types';
 
 /* ── URL / IP validation ──────────────────────────────────────────── */
 const IP_RE = /^(\d{1,3}\.){3}\d{1,3}(:\d{1,5})?$/;
@@ -28,6 +29,12 @@ const schema = z.object({
 });
 type FormData = z.infer<typeof schema>;
 
+const saveProfileSchema = z.object({
+  profileName: z.string().min(1, 'Nom requis').max(100),
+  profileDesc: z.string().max(500).optional(),
+});
+type SaveProfileForm = z.infer<typeof saveProfileSchema>;
+
 /* ── Severity config ──────────────────────────────────────────────── */
 const SEV_CFG: Record<string, { label: string; bg: string; color: string }> = {
   CRITICAL: { label: 'CRITIQUE', bg: '#FFF0F0', color: '#FF6B6B' },
@@ -38,49 +45,82 @@ const SEV_CFG: Record<string, { label: string; bg: string; color: string }> = {
 
 /* ── Module metadata (icon + severity + CVSS) ─────────────────────── */
 const MODULE_META: Record<string, { severity: string; cvss: number; icon: string }> = {
-  sql_injection:            { severity: 'CRITICAL', cvss: 9.8, icon: '≡'   },
-  xss_scanner:              { severity: 'HIGH',     cvss: 7.2, icon: '<>'  },
-  port_scanner:             { severity: 'HIGH',     cvss: 9.1, icon: '⋮'   },
-  http_headers:             { severity: 'MEDIUM',   cvss: 7.5, icon: 'HDR' },
-  ssl_checker:              { severity: 'MEDIUM',   cvss: 5.3, icon: '🔒'  },
-  csrf_scanner:             { severity: 'MEDIUM',   cvss: 6.5, icon: '↺'   },
-  directory_traversal:      { severity: 'HIGH',     cvss: 7.5, icon: '../' },
-  open_redirect:            { severity: 'MEDIUM',   cvss: 6.1, icon: '→'   },
-  security_misconfiguration:{ severity: 'HIGH',     cvss: 7.2, icon: '⚙'   },
-  sensitive_files:          { severity: 'MEDIUM',   cvss: 5.8, icon: 'TXT' },
-  whois_lookup:             { severity: 'LOW',      cvss: 2.0, icon: 'W'   },
-  dns_recon:                { severity: 'HIGH',     cvss: 9.1, icon: 'DNS' },
-  subdomain_enum:           { severity: 'MEDIUM',   cvss: 4.3, icon: '.*'  },
-  email_harvester:          { severity: 'LOW',      cvss: 3.1, icon: '@'   },
-  technology_fingerprint:   { severity: 'LOW',      cvss: 2.5, icon: 'FP'  },
-  google_dorks:             { severity: 'HIGH',     cvss: 7.0, icon: 'G'   },
-  metadata_extractor:       { severity: 'MEDIUM',   cvss: 4.5, icon: 'M'   },
-  broken_links:             { severity: 'LOW',      cvss: 2.5, icon: '404' },
-  javascript_analyzer:      { severity: 'CRITICAL', cvss: 9.0, icon: 'JS'  },
+  // Existing
+  sql_injection:            { severity: 'CRITICAL', cvss: 9.8, icon: '≡'    },
+  xss_scanner:              { severity: 'HIGH',     cvss: 7.2, icon: '<>'   },
+  port_scanner:             { severity: 'HIGH',     cvss: 9.1, icon: '⋮'    },
+  http_headers:             { severity: 'MEDIUM',   cvss: 7.5, icon: 'HDR'  },
+  ssl_checker:              { severity: 'MEDIUM',   cvss: 5.3, icon: '🔒'   },
+  csrf_scanner:             { severity: 'MEDIUM',   cvss: 6.5, icon: '↺'    },
+  directory_traversal:      { severity: 'HIGH',     cvss: 7.5, icon: '../'  },
+  open_redirect:            { severity: 'MEDIUM',   cvss: 6.1, icon: '→'    },
+  security_misconfiguration:{ severity: 'HIGH',     cvss: 7.2, icon: '⚙'    },
+  sensitive_files:          { severity: 'MEDIUM',   cvss: 5.8, icon: 'TXT'  },
+  whois_lookup:             { severity: 'LOW',      cvss: 2.0, icon: 'W'    },
+  dns_recon:                { severity: 'HIGH',     cvss: 9.1, icon: 'DNS'  },
+  subdomain_enum:           { severity: 'MEDIUM',   cvss: 4.3, icon: '.*'   },
+  email_harvester:          { severity: 'LOW',      cvss: 3.1, icon: '@'    },
+  technology_fingerprint:   { severity: 'LOW',      cvss: 2.5, icon: 'FP'   },
+  google_dorks:             { severity: 'HIGH',     cvss: 7.0, icon: 'G'    },
+  metadata_extractor:       { severity: 'MEDIUM',   cvss: 4.5, icon: 'M'    },
+  broken_links:             { severity: 'LOW',      cvss: 2.5, icon: '404'  },
+  javascript_analyzer:      { severity: 'CRITICAL', cvss: 9.0, icon: 'JS'   },
+  // New offensive modules
+  lfi_rfi_scanner:          { severity: 'CRITICAL', cvss: 9.0, icon: '../'  },
+  xxe_scanner:              { severity: 'HIGH',     cvss: 8.2, icon: 'XXE'  },
+  ssrf_scanner:             { severity: 'HIGH',     cvss: 8.6, icon: 'SSRF' },
+  command_injection:        { severity: 'CRITICAL', cvss: 9.8, icon: '>_'   },
+  http_methods_scanner:     { severity: 'MEDIUM',   cvss: 6.5, icon: 'PUT'  },
+  api_fuzzer:               { severity: 'HIGH',     cvss: 8.0, icon: '/v1'  },
+  broken_auth_api:          { severity: 'HIGH',     cvss: 8.8, icon: 'JWT'  },
+  graphql_introspection:    { severity: 'MEDIUM',   cvss: 5.3, icon: 'GQL'  },
+  rate_limit_tester:        { severity: 'MEDIUM',   cvss: 5.3, icon: '⏱'   },
+  banner_grabbing:          { severity: 'MEDIUM',   cvss: 5.0, icon: 'BNR'  },
+  firewall_detection:       { severity: 'MEDIUM',   cvss: 4.0, icon: '🔥'   },
+  traceroute_analysis:      { severity: 'LOW',      cvss: 3.0, icon: 'HOP'  },
+  ipv6_scanner:             { severity: 'MEDIUM',   cvss: 4.5, icon: 'v6'   },
+  os_fingerprint:           { severity: 'LOW',      cvss: 3.7, icon: 'OS'   },
+  service_version_scan:     { severity: 'HIGH',     cvss: 7.5, icon: 'CVE'  },
+  default_credentials:      { severity: 'CRITICAL', cvss: 9.8, icon: 'PWD'  },
 };
 
 /* ── Category tabs ────────────────────────────────────────────────── */
 type CatTab = 'ALL' | ModuleCategory;
 
 const CAT_TABS: { key: CatTab; label: string; color: string }[] = [
-  { key: 'ALL',      label: 'Tous',     color: '#6B6B8A' },
-  { key: 'SECURITY', label: 'Sécurité', color: '#FF6B6B' },
-  { key: 'NETWORK',  label: 'Réseau',   color: '#4ECDC4' },
-  { key: 'OSINT',    label: 'OSINT',    color: '#7C6FF7' },
-  { key: 'SCRAPING', label: 'Scraping', color: '#FFB347' },
+  { key: 'ALL',              label: 'Tous',           color: '#6B6B8A' },
+  { key: 'SECURITY',         label: 'Sécurité',       color: '#FF6B6B' },
+  { key: 'WEB_OFFENSIVE',    label: 'Web Offensif',   color: '#E05252' },
+  { key: 'API_OFFENSIVE',    label: 'API Offensif',   color: '#C0392B' },
+  { key: 'NETWORK',          label: 'Réseau',         color: '#4ECDC4' },
+  { key: 'NETWORK_OFFENSIVE',label: 'Réseau Offensif',color: '#2E86AB' },
+  { key: 'OSINT',            label: 'OSINT',          color: '#7C6FF7' },
+  { key: 'SCRAPING',         label: 'Scraping',       color: '#FFB347' },
+  { key: 'SYSTEM',           label: 'Système',        color: '#8E44AD' },
 ];
 
 const CAT_BG: Record<string, { bg: string; color: string }> = {
-  SECURITY: { bg: '#FFF0F0', color: '#FF6B6B' },
-  NETWORK:  { bg: '#E8FFFE', color: '#4ECDC4' },
-  OSINT:    { bg: '#F0EEFF', color: '#7C6FF7' },
-  SCRAPING: { bg: '#FFF7E6', color: '#FFB347' },
+  SECURITY:          { bg: '#FFF0F0', color: '#FF6B6B' },
+  NETWORK:           { bg: '#E8FFFE', color: '#4ECDC4' },
+  OSINT:             { bg: '#F0EEFF', color: '#7C6FF7' },
+  SCRAPING:          { bg: '#FFF7E6', color: '#FFB347' },
+  WEB_OFFENSIVE:     { bg: '#FFE8E8', color: '#E05252' },
+  API_OFFENSIVE:     { bg: '#FFE0E0', color: '#C0392B' },
+  NETWORK_OFFENSIVE: { bg: '#E0F0FF', color: '#2E86AB' },
+  SYSTEM:            { bg: '#F5E6FF', color: '#8E44AD' },
 };
 
 /* ── Recommended slugs ────────────────────────────────────────────── */
 const RECOMMENDED = [
   'sql_injection', 'xss_scanner', 'http_headers', 'ssl_checker',
   'csrf_scanner', 'port_scanner', 'technology_fingerprint', 'javascript_analyzer',
+];
+
+/* ── Reconnaissance profile slugs (default) ──────────────────────── */
+const RECON_SLUGS = [
+  'whois_lookup', 'dns_recon', 'subdomain_enum',
+  'email_harvester', 'technology_fingerprint',
+  'http_headers', 'port_scanner',
 ];
 
 const DEPTH_OPTS = [
@@ -98,57 +138,119 @@ const THREAD_OPTS = [
 
 /* ── Page ─────────────────────────────────────────────────────────── */
 export default function NewScanPage() {
-  const navigate = useNavigate();
-  const [submitError,     setSubmitError]     = useState('');
-  const [selectedModules, setSelectedModules] = useState<Set<string>>(new Set());
-  const [optionsOpen,     setOptionsOpen]     = useState(false);
-  const [urlValue,        setUrlValue]        = useState('');
-  const [catFilter,       setCatFilter]       = useState<CatTab>('ALL');
-  const [search,          setSearch]          = useState('');
+  const navigate     = useNavigate();
+  const queryClient  = useQueryClient();
+  const [submitError,       setSubmitError]       = useState('');
+  const [selectedModules,   setSelectedModules]   = useState<Set<string>>(new Set());
+  const [optionsOpen,       setOptionsOpen]       = useState(false);
+  const [urlValue,          setUrlValue]          = useState('');
+  const [catFilter,         setCatFilter]         = useState<CatTab>('ALL');
+  const [search,            setSearch]            = useState('');
+  const [selectedProfileId, setSelectedProfileId] = useState<string>('');
+  const [showSaveModal,     setShowSaveModal]     = useState(false);
+  const [saveError,         setSaveError]         = useState('');
 
+  /* ── Queries ─────────────────────────────────────────────────────── */
   const { data: modulesData } = useQuery<{ data: { data: ScanModule[] } }>({
     queryKey: ['modules'],
     queryFn:  () => api.get('/modules'),
   });
   const modules = modulesData?.data?.data ?? [];
 
+  const { data: profilesData } = useQuery<{ data: { data: ScanProfile[] } }>({
+    queryKey: ['profiles'],
+    queryFn:  () => api.get('/profiles'),
+  });
+  const profiles = profilesData?.data?.data ?? [];
+
+  /* ── Profile save mutation ───────────────────────────────────────── */
+  const saveMutation = useMutation({
+    mutationFn: (data: { name: string; description?: string; modules: string[] }) =>
+      api.post('/profiles', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['profiles'] });
+      setShowSaveModal(false);
+      profileForm.reset();
+    },
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: { message?: string } } })
+        ?.response?.data?.message ?? 'Erreur lors de la sauvegarde';
+      setSaveError(msg);
+    },
+  });
+
+  /* ── Default module selection ─────────────────────────────────────── */
   useEffect(() => {
     if (modules.length > 0 && selectedModules.size === 0) {
       setSelectedModules(new Set(modules.filter(m => m.defaultEnabled && m.isActive).map(m => m.id)));
     }
   }, [modules]);
 
-  const { register, handleSubmit, watch, setValue, formState: { errors, isSubmitting } } =
+  /* ── Main form ────────────────────────────────────────────────────── */
+  const { register, handleSubmit, watch, formState: { errors, isSubmitting } } =
     useForm<FormData>({
       resolver: zodResolver(schema),
       defaultValues: { depth: 'normal', threads: 5 },
     });
 
+  /* ── Profile save form ────────────────────────────────────────────── */
+  const profileForm = useForm<SaveProfileForm>({
+    resolver: zodResolver(saveProfileSchema),
+  });
+
   const depth   = watch('depth');
   const threads = watch('threads');
 
+  /* ── Toggles ─────────────────────────────────────────────────────── */
   const toggleModule = (id: string) => {
     setSelectedModules(prev => {
       const next = new Set(prev);
       next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
+    setSelectedProfileId(''); // clear profile when user manually changes
   };
 
-  const selectAll         = () => setSelectedModules(new Set(visibleModules.map(m => m.id)));
-  const deselectAll       = () => setSelectedModules(new Set());
+  const selectAll         = () => { setSelectedModules(new Set(visibleModules.map(m => m.id))); setSelectedProfileId(''); };
+  const deselectAll       = () => { setSelectedModules(new Set()); setSelectedProfileId(''); };
   const selectRecommended = () => {
     const ids = modules.filter(m => RECOMMENDED.includes(m.slug)).map(m => m.id);
     setSelectedModules(new Set(ids));
+    setSelectedProfileId('');
   };
 
+  /* ── Apply profile ────────────────────────────────────────────────── */
+  const applyProfile = (profileId: string) => {
+    setSelectedProfileId(profileId);
+    if (!profileId) return;
+    const profile = profiles.find(p => p.id === profileId);
+    if (!profile) return;
+    const ids = modules.filter(m => profile.modules.includes(m.slug)).map(m => m.id);
+    setSelectedModules(new Set(ids));
+  };
+
+  /* ── Submit ──────────────────────────────────────────────────────── */
   const onSubmit = async (data: FormData) => {
     setSubmitError('');
     const url = IP_RE.test(data.targetUrl.trim())
       ? `http://${data.targetUrl.trim()}`
       : data.targetUrl.trim();
+
+    let moduleIds = Array.from(selectedModules);
+
+    // Default: if no modules selected, apply Reconnaissance
+    if (moduleIds.length === 0) {
+      const reconIds = modules.filter(m => RECON_SLUGS.includes(m.slug)).map(m => m.id);
+      moduleIds = reconIds;
+    }
+
     try {
-      const res = await api.post('/scans', { ...data, targetUrl: url, threads: Number(data.threads) });
+      const res = await api.post('/scans', {
+        ...data,
+        targetUrl: url,
+        threads: Number(data.threads),
+        moduleIds,
+      });
       navigate(`/scans/${res.data.data.id}/live`);
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })
@@ -157,9 +259,24 @@ export default function NewScanPage() {
     }
   };
 
+  /* ── Save profile ────────────────────────────────────────────────── */
+  const onSaveProfile = (data: SaveProfileForm) => {
+    setSaveError('');
+    const slugs = modules.filter(m => selectedModules.has(m.id)).map(m => m.slug);
+    if (slugs.length === 0) {
+      setSaveError('Aucun module sélectionné');
+      return;
+    }
+    saveMutation.mutate({
+      name:        data.profileName,
+      description: data.profileDesc,
+      modules:     slugs,
+    });
+  };
+
   // Filter visible modules
   const visibleModules = modules.filter(m => {
-    const matchCat = catFilter === 'ALL' || m.category === catFilter;
+    const matchCat    = catFilter === 'ALL' || m.category === catFilter;
     const matchSearch = !search || m.name.toLowerCase().includes(search.toLowerCase()) ||
       m.description.toLowerCase().includes(search.toLowerCase());
     return matchCat && matchSearch;
@@ -171,7 +288,7 @@ export default function NewScanPage() {
   const DEPTH_LABEL: Record<string, string> = { fast: 'Rapide', normal: 'Normal', deep: 'Approfondi' };
   const estimatedTime = { fast: '~5 minutes', normal: '~20 minutes', deep: '~45 minutes' }[depth] ?? '~20 minutes';
 
-  const isValidUrl = urlValue.trim() && !errors.targetUrl;
+  const noModulesSelected = selectedModules.size === 0;
 
   return (
     <Layout>
@@ -216,9 +333,7 @@ export default function NewScanPage() {
             <div className="flex items-stretch rounded-xl overflow-hidden mb-3"
                  style={{ border: errors.targetUrl ? '1.5px solid #FF6B6B' : '1.5px solid #EDE8FF' }}>
               <input
-                {...register('targetUrl', {
-                  onChange: e => { setUrlValue(e.target.value); },
-                })}
+                {...register('targetUrl', { onChange: e => setUrlValue(e.target.value) })}
                 placeholder="https://exemple.com  ou  192.168.1.1:8080"
                 className="flex-1 px-4 py-3 font-mono text-sm outline-none bg-white text-navy"
               />
@@ -245,6 +360,73 @@ export default function NewScanPage() {
             />
           </div>
 
+          {/* ── Profil de scan ─────────────────────────────────── */}
+          <div className="bg-white rounded-2xl p-6" style={{ border: '1px solid #EDE8FF' }}>
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: '#FFF7E6' }}>
+                <Bookmark size={14} style={{ color: '#FFB347' }} />
+              </div>
+              <div>
+                <p className="font-bold text-navy text-sm">Profil de scan</p>
+                <p className="text-xs" style={{ color: '#6B6B8A' }}>Appliquer un profil pour pré-sélectionner les modules</p>
+              </div>
+            </div>
+
+            <div className="flex gap-3 flex-wrap">
+              {/* Profile dropdown */}
+              <div className="relative flex-1 min-w-[200px]">
+                <select
+                  value={selectedProfileId}
+                  onChange={e => applyProfile(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl text-sm outline-none appearance-none pr-8"
+                  style={{ border: '1.5px solid #EDE8FF', background: '#FAFAFA', color: selectedProfileId ? '#1C1C2E' : '#6B6B8A' }}
+                >
+                  <option value="">— Choisir un profil —</option>
+                  {profiles.map(p => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}{p.isDefault ? ' (défaut)' : ''}
+                    </option>
+                  ))}
+                </select>
+                <ChevDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                          style={{ color: '#6B6B8A' }} />
+              </div>
+
+              {/* Save as profile button */}
+              <button
+                type="button"
+                onClick={() => { setShowSaveModal(true); setSaveError(''); profileForm.reset(); }}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all shrink-0"
+                style={{ border: '1.5px solid #7C6FF7', color: '#7C6FF7', background: '#F0EEFF' }}
+              >
+                <BookmarkIcon size={13} />
+                Sauvegarder comme profil
+              </button>
+            </div>
+
+            {selectedProfileId && (
+              <div className="mt-3 flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full" style={{ background: '#FFB347' }} />
+                <p className="text-xs" style={{ color: '#6B6B8A' }}>
+                  Profil appliqué : <strong style={{ color: '#1C1C2E' }}>
+                    {profiles.find(p => p.id === selectedProfileId)?.name}
+                  </strong> — {selectedModules.size} module(s) sélectionné(s)
+                </p>
+              </div>
+            )}
+
+            {/* Default profile notice */}
+            {noModulesSelected && (
+              <div className="mt-3 flex items-start gap-2 rounded-xl p-3" style={{ background: '#FFF7E6', border: '1px solid #FFE4A0' }}>
+                <AlertTriangle size={13} style={{ color: '#FFB347', flexShrink: 0, marginTop: 1 }} />
+                <p className="text-xs" style={{ color: '#664D00' }}>
+                  Aucun module sélectionné. Le profil <strong>Reconnaissance</strong> sera appliqué par défaut
+                  (WHOIS, DNS, sous-domaines, emails, fingerprinting, headers, ports).
+                </p>
+              </div>
+            )}
+          </div>
+
           {/* Modules de détection */}
           <div className="bg-white rounded-2xl p-6" style={{ border: '1px solid #EDE8FF' }}>
             {/* Header */}
@@ -266,7 +448,6 @@ export default function NewScanPage() {
 
             {/* Search + category tabs */}
             <div className="flex items-center gap-3 mb-4 flex-wrap">
-              {/* Search */}
               <div className="relative flex-1 min-w-[180px]">
                 <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#6B6B8A' }} />
                 <input
@@ -277,7 +458,6 @@ export default function NewScanPage() {
                   style={{ border: '1px solid #EDE8FF', background: '#FAFAFA' }}
                 />
               </div>
-              {/* Category tabs */}
               <div className="flex gap-1 flex-wrap">
                 {CAT_TABS.map(t => (
                   <button
@@ -297,7 +477,7 @@ export default function NewScanPage() {
             </div>
 
             {/* Quick select buttons */}
-            <div className="flex gap-2 mb-4">
+            <div className="flex gap-2 mb-4 flex-wrap">
               <button type="button" onClick={selectAll}
                       className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
                       style={{ border: '1px solid #EDE8FF', color: '#6B6B8A', background: '#FAFAFA' }}>
@@ -335,7 +515,6 @@ export default function NewScanPage() {
                       onClick={() => toggleModule(m.id)}
                     >
                       <div className="flex items-start gap-3">
-                        {/* Icon */}
                         <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 font-mono text-xs font-bold"
                              style={{ background: sev.bg, color: sev.color }}>
                           {meta?.icon ?? '⚡'}
@@ -343,10 +522,9 @@ export default function NewScanPage() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <p className="font-bold text-navy text-sm">{m.name}</p>
-                            {/* Category badge */}
                             <span className="text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide"
                                   style={{ background: catStyle.bg, color: catStyle.color }}>
-                              {m.category}
+                              {m.category.replace('_', ' ')}
                             </span>
                           </div>
                           <p className="text-xs mt-0.5 leading-relaxed" style={{ color: '#6B6B8A' }}>
@@ -359,7 +537,6 @@ export default function NewScanPage() {
                             </span>
                           )}
                         </div>
-                        {/* Checkbox */}
                         <div className="shrink-0 mt-0.5">
                           <div className="w-5 h-5 rounded flex items-center justify-center transition-all"
                                style={{
@@ -433,18 +610,34 @@ export default function NewScanPage() {
                 <p className="font-mono text-sm text-navy truncate">{urlDomain}</p>
               </div>
 
+              {selectedProfileId && (
+                <div className="mb-4">
+                  <p className="text-[10px] font-bold uppercase tracking-wider mb-1.5" style={{ color: '#6B6B8A' }}>
+                    Profil
+                  </p>
+                  <span className="text-xs font-semibold px-2 py-1 rounded-lg"
+                        style={{ background: '#FFF7E6', color: '#FFB347' }}>
+                    {profiles.find(p => p.id === selectedProfileId)?.name ?? ''}
+                  </span>
+                </div>
+              )}
+
               <div className="mb-4">
                 <p className="text-[10px] font-bold uppercase tracking-wider mb-1.5" style={{ color: '#6B6B8A' }}>
-                  Modules sélectionnés ({selectedModules.size})
+                  Modules sélectionnés ({noModulesSelected ? `0 → Reconnaissance` : selectedModules.size})
                 </p>
                 <div className="flex flex-wrap gap-1">
-                  {selectedModuleNames.slice(0, 4).map(name => (
+                  {(noModulesSelected
+                    ? RECON_SLUGS.slice(0, 4)
+                    : selectedModuleNames.slice(0, 4)
+                  ).map(name => (
                     <span key={name} className="text-[10px] px-2 py-0.5 rounded-full font-medium"
-                          style={{ background: '#F0EEFF', color: '#7C6FF7' }}>
+                          style={{ background: noModulesSelected ? '#FFF7E6' : '#F0EEFF',
+                                   color: noModulesSelected ? '#FFB347' : '#7C6FF7' }}>
                       {name}
                     </span>
                   ))}
-                  {selectedModuleNames.length > 4 && (
+                  {!noModulesSelected && selectedModuleNames.length > 4 && (
                     <span className="text-[10px] px-2 py-0.5 rounded-full font-medium"
                           style={{ background: '#F0EEFF', color: '#7C6FF7' }}>
                       +{selectedModuleNames.length - 4}
@@ -481,11 +674,12 @@ export default function NewScanPage() {
               </button>
               <button
                 type="button"
+                onClick={() => { setShowSaveModal(true); setSaveError(''); profileForm.reset(); }}
                 className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-medium text-sm transition-all"
                 style={{ border: '1px solid #EDE8FF', color: '#6B6B8A' }}
               >
                 <BookmarkIcon size={13} />
-                Sauvegarder en brouillon
+                Sauvegarder en profil
               </button>
             </div>
 
@@ -501,6 +695,91 @@ export default function NewScanPage() {
           </div>
         </div>
       </div>
+
+      {/* ── Save Profile Modal ─────────────────────────────────────── */}
+      {showSaveModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center"
+             style={{ background: 'rgba(28,28,46,0.55)' }}
+             onClick={e => { if (e.target === e.currentTarget) setShowSaveModal(false); }}>
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl"
+               style={{ border: '1px solid #EDE8FF' }}>
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg flex items-center justify-center"
+                     style={{ background: '#FFF7E6' }}>
+                  <Bookmark size={14} style={{ color: '#FFB347' }} />
+                </div>
+                <h2 className="font-bold text-navy text-sm">Sauvegarder comme profil</h2>
+              </div>
+              <button onClick={() => setShowSaveModal(false)}
+                      className="p-1 rounded-lg hover:bg-gray-100 transition-all">
+                <X size={16} style={{ color: '#6B6B8A' }} />
+              </button>
+            </div>
+
+            <form onSubmit={profileForm.handleSubmit(onSaveProfile)} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-navy mb-1.5 uppercase tracking-wide">
+                  Nom du profil *
+                </label>
+                <input
+                  {...profileForm.register('profileName')}
+                  placeholder="Mon profil personnalisé"
+                  className="w-full px-4 py-2.5 rounded-xl text-sm outline-none"
+                  style={{ border: profileForm.formState.errors.profileName ? '1.5px solid #FF6B6B' : '1.5px solid #EDE8FF', background: '#FAFAFA' }}
+                />
+                {profileForm.formState.errors.profileName && (
+                  <p className="text-xs mt-1" style={{ color: '#FF6B6B' }}>
+                    {profileForm.formState.errors.profileName.message}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-navy mb-1.5 uppercase tracking-wide">
+                  Description (optionnelle)
+                </label>
+                <textarea
+                  {...profileForm.register('profileDesc')}
+                  placeholder="Description du profil…"
+                  rows={2}
+                  className="w-full px-4 py-2.5 rounded-xl text-sm outline-none resize-none"
+                  style={{ border: '1.5px solid #EDE8FF', background: '#FAFAFA' }}
+                />
+              </div>
+
+              <div className="rounded-xl p-3" style={{ background: '#F0EEFF' }}>
+                <p className="text-xs" style={{ color: '#7C6FF7' }}>
+                  <strong>{selectedModules.size}</strong> module(s) sélectionné(s) seront sauvegardés dans ce profil.
+                </p>
+              </div>
+
+              {saveError && (
+                <p className="text-xs" style={{ color: '#FF6B6B' }}>{saveError}</p>
+              )}
+
+              <div className="flex gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowSaveModal(false)}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all"
+                  style={{ border: '1px solid #EDE8FF', color: '#6B6B8A' }}
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  disabled={saveMutation.isPending}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition-all disabled:opacity-50"
+                  style={{ background: '#7C6FF7' }}
+                >
+                  {saveMutation.isPending ? 'Sauvegarde…' : 'Sauvegarder'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 }

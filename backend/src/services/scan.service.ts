@@ -14,9 +14,14 @@ export class ScanService {
     // 1. Créer le scan en base
     const scan = await scanRepo.create(userId, dto);
 
-    // 2. Récupérer les modules actifs par défaut
-    const modules = await moduleRepo.findAllActive();
-    const activeModules = modules.filter(m => m.defaultEnabled);
+    // 2. Récupérer les modules — si moduleIds fournis, les utiliser, sinon defaultEnabled
+    let activeModules;
+    if (dto.moduleIds && dto.moduleIds.length > 0) {
+      activeModules = await moduleRepo.findByIds(dto.moduleIds);
+    } else {
+      const modules = await moduleRepo.findAllActive();
+      activeModules = modules.filter(m => m.defaultEnabled);
+    }
 
     if (!activeModules.length) {
       throw new AppError('Aucun module de scan disponible', 503);
