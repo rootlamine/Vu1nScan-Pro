@@ -5,6 +5,11 @@ import sys, os, argparse, time, json
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from core.base_module import BaseModule
 
+OSINT_REFS = [
+    "https://owasp.org/www-project-web-security-testing-guide/v42/4-Web_Application_Security_Testing/01-Information_Gathering/",
+    "https://www.sans.org/white-papers/33",
+]
+
 
 class WhoisLookup(BaseModule):
 
@@ -57,6 +62,7 @@ class WhoisLookup(BaseModule):
                             "Activez la protection WHOIS (privacy protection) auprès de votre registrar "
                             "pour masquer les informations personnelles et organisationnelles."
                         ),
+                        references=OSINT_REFS,
                     ))
             except Exception:
                 pass

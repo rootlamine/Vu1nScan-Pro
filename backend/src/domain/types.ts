@@ -57,6 +57,7 @@ export interface VulnOutput {
   description: string;
   payload?: string;
   recommendation: string;
+  references?: string[];
 }
 
 export interface ModuleOutput {

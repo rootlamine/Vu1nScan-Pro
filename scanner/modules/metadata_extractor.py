@@ -5,6 +5,11 @@ import sys, os, argparse, time, json, re
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from core.base_module import BaseModule
 
+OSINT_REFS = [
+    "https://owasp.org/www-project-web-security-testing-guide/v42/4-Web_Application_Security_Testing/01-Information_Gathering/",
+    "https://www.sans.org/white-papers/33",
+]
+
 SENSITIVE_META_KEYS = [
     "author", "creator", "producer", "company", "manager",
     "last modified by", "template", "application",
@@ -103,6 +108,7 @@ class MetadataExtractor(BaseModule):
                                 "Nettoyez les métadonnées avant publication (File > Properties > Remove Personal Info). "
                                 "Utilisez des outils comme ExifTool ou mat2 pour anonymiser les documents."
                             ),
+                            references=OSINT_REFS,
                         ))
                 except Exception:
                     pass
@@ -129,6 +135,7 @@ class MetadataExtractor(BaseModule):
                                 "Supprimez les métadonnées EXIF avant de publier des images. "
                                 "Utilisez ImageMagick (mogrify -strip) ou PIL pour nettoyer les EXIF."
                             ),
+                            references=OSINT_REFS,
                         ))
                 except Exception:
                     pass

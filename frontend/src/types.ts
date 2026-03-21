@@ -63,6 +63,7 @@ export interface Vulnerability {
   description:    string;
   payload:        string | null;
   recommendation: string;
+  references:     string[];
   createdAt:      string;
 }
 

@@ -81,6 +81,7 @@ export class VulnRepository implements IVulnRepository {
         description:    v.description,
         payload:        v.payload,
         recommendation: v.recommendation,
+        references:     v.references ?? [],
       })),
     });
   }

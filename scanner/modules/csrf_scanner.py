@@ -14,6 +14,12 @@ sys.path.insert(0, '..')
 from core.base_module import BaseModule
 
 
+CSRF_REFS = [
+    "https://owasp.org/www-community/attacks/csrf",
+    "https://cwe.mitre.org/data/definitions/352.html",
+    "https://portswigger.net/web-security/csrf",
+]
+
 CSRF_TOKEN_PATTERNS = [
     r'csrf', r'_token', r'authenticity_token', r'csrfmiddlewaretoken',
     r'xsrf', r'__requestverificationtoken', r'nonce',
@@ -71,6 +77,7 @@ class Module(BaseModule):
                         "Implémenter des tokens CSRF synchronisés (Synchronizer Token Pattern). "
                         "Utiliser les attributs SameSite=Strict sur les cookies de session."
                     ),
+                    references=CSRF_REFS,
                 ))
 
             # Vérifier l'en-tête SameSite sur les cookies
@@ -86,6 +93,7 @@ class Module(BaseModule):
                             parameter=cookie.name,
                             description=f"Le cookie '{cookie.name}' n'a pas l'attribut SameSite, facilitant les attaques CSRF.",
                             recommendation="Ajouter SameSite=Strict ou SameSite=Lax sur tous les cookies de session.",
+                            references=CSRF_REFS,
                         ))
                         break
 

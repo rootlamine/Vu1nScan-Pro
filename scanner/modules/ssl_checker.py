@@ -13,6 +13,12 @@ from datetime import datetime
 sys.path.insert(0, '..')
 from core.base_module import BaseModule
 
+SSL_REFS = [
+    "https://owasp.org/www-project-transport-layer-protection-cheat-sheet/",
+    "https://cwe.mitre.org/data/definitions/326.html",
+    "https://www.ssllabs.com/ssltest/",
+]
+
 
 class Module(BaseModule):
 
@@ -35,6 +41,7 @@ class Module(BaseModule):
                     endpoint=url,
                     description="Le site n'utilise pas HTTPS. Les données transitent en clair sur le réseau.",
                     recommendation="Configurer un certificat SSL/TLS et rediriger HTTP vers HTTPS.",
+                    references=SSL_REFS,
                 ))
                 duration = int((time.time() - start) * 1000)
                 return self.result("ssl_checker", vulns, duration)
@@ -63,6 +70,7 @@ class Module(BaseModule):
                                     endpoint=url,
                                     description=f"Le certificat SSL a expiré le {not_after_str}.",
                                     recommendation="Renouveler immédiatement le certificat SSL/TLS.",
+                                    references=SSL_REFS,
                                 ))
                             elif days_left < 30:
                                 vulns.append(self.vuln(
@@ -72,6 +80,7 @@ class Module(BaseModule):
                                     endpoint=url,
                                     description=f"Le certificat SSL expire dans {days_left} jours.",
                                     recommendation="Renouveler le certificat SSL/TLS avant expiration.",
+                                    references=SSL_REFS,
                                 ))
 
                         # Vérifier version TLS obsolète
@@ -83,6 +92,7 @@ class Module(BaseModule):
                                 endpoint=url,
                                 description=f"Le serveur utilise {proto}, une version obsolète et vulnérable.",
                                 recommendation="Configurer le serveur pour utiliser TLS 1.2 ou TLS 1.3 uniquement.",
+                                references=SSL_REFS,
                             ))
 
                         # Chiffrement faible
@@ -94,6 +104,7 @@ class Module(BaseModule):
                                 endpoint=url,
                                 description=f"Le serveur accepte le chiffrement faible : {cipher[0]}.",
                                 recommendation="Désactiver les suites de chiffrement faibles et n'autoriser que AES-GCM.",
+                                references=SSL_REFS,
                             ))
 
             except ssl.SSLCertVerificationError as e:
@@ -104,6 +115,7 @@ class Module(BaseModule):
                     endpoint=url,
                     description=f"La vérification du certificat a échoué : {e}",
                     recommendation="Obtenir un certificat signé par une CA reconnue (ex: Let's Encrypt).",
+                    references=SSL_REFS,
                 ))
             except ssl.SSLError as e:
                 vulns.append(self.vuln(
@@ -113,6 +125,7 @@ class Module(BaseModule):
                     endpoint=url,
                     description=f"Erreur lors de la connexion SSL : {e}",
                     recommendation="Vérifier la configuration SSL du serveur.",
+                    references=SSL_REFS,
                 ))
 
         except Exception as e:

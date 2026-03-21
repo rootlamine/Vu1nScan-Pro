@@ -81,43 +81,56 @@ async function main() {
       data: { scanId: scan1.id, moduleId: mod.id, status: 'DONE', executionTime: Math.floor(Math.random() * 8000) + 2000 },
     });
   }
+  const SQL_REFS = ['https://owasp.org/www-community/attacks/SQL_Injection','https://cwe.mitre.org/data/definitions/89.html','https://portswigger.net/web-security/sql-injection','https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html'];
+  const XSS_REFS = ['https://owasp.org/www-community/attacks/xss/','https://cwe.mitre.org/data/definitions/79.html','https://portswigger.net/web-security/cross-site-scripting','https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html'];
+  const HDR_REFS = ['https://owasp.org/www-project-secure-headers/','https://securityheaders.com/','https://cheatsheetseries.owasp.org/cheatsheets/HTTP_Headers_Cheat_Sheet.html'];
+  const PRT_REFS = ['https://www.iana.org/assignments/service-names-port-numbers/','https://nmap.org/book/man-port-scanning-basics.html'];
+
   await prisma.vulnerability.createMany({
     data: [
       { scanId: scan1.id, name: 'Injection SQL détectée', severity: 'CRITICAL', cvssScore: 9.8,
         endpoint: 'http://testphp.vulnweb.com/listproducts.php', parameter: 'cat',
         description: "Injection SQL confirmée via le paramètre 'cat'. Le payload provoque un message d'erreur MySQL révélant la technologie de base de données.",
         payload: "' OR '1'='1' --",
-        recommendation: "Utiliser des requêtes préparées (prepared statements). Ne jamais concaténer les entrées utilisateur dans les requêtes SQL." },
+        recommendation: "Utiliser des requêtes préparées (prepared statements). Ne jamais concaténer les entrées utilisateur dans les requêtes SQL.",
+        references: SQL_REFS },
       { scanId: scan1.id, name: 'Injection SQL détectée', severity: 'CRITICAL', cvssScore: 9.8,
         endpoint: 'http://testphp.vulnweb.com/artists.php', parameter: 'artist',
         description: "Injection SQL confirmée via le paramètre 'artist'.",
         payload: "'",
-        recommendation: "Utiliser des requêtes préparées." },
+        recommendation: "Utiliser des requêtes préparées.",
+        references: SQL_REFS },
       { scanId: scan1.id, name: 'Cross-Site Scripting (XSS) réfléchi', severity: 'HIGH', cvssScore: 7.2,
         endpoint: 'http://testphp.vulnweb.com/search.php', parameter: 'test',
         description: "Le paramètre 'test' réfléchit le payload XSS sans encodage HTML, permettant l'exécution de code JavaScript arbitraire.",
         payload: '<script>alert(1)</script>',
-        recommendation: "Encoder toutes les sorties HTML avec htmlspecialchars(). Implémenter une CSP stricte." },
+        recommendation: "Encoder toutes les sorties HTML avec htmlspecialchars(). Implémenter une CSP stricte.",
+        references: XSS_REFS },
       { scanId: scan1.id, name: 'En-tête Content-Security-Policy manquant', severity: 'HIGH', cvssScore: 7.5,
         endpoint: 'http://testphp.vulnweb.com',
         description: "L'en-tête Content-Security-Policy (CSP) est absent. Cela expose l'application aux attaques XSS.",
-        recommendation: "Configurer une politique CSP stricte : Content-Security-Policy: default-src 'self'" },
+        recommendation: "Configurer une politique CSP stricte : Content-Security-Policy: default-src 'self'",
+        references: HDR_REFS },
       { scanId: scan1.id, name: 'Port MySQL exposé (3306/tcp)', severity: 'CRITICAL', cvssScore: 9.8,
         endpoint: 'testphp.vulnweb.com:3306',
         description: "MySQL (port 3306) est accessible depuis l'extérieur. La base de données ne devrait jamais être exposée sur Internet.",
-        recommendation: "Fermer le port 3306 dans le pare-feu. Restreindre l'accès aux IP internes." },
+        recommendation: "Fermer le port 3306 dans le pare-feu. Restreindre l'accès aux IP internes.",
+        references: PRT_REFS },
       { scanId: scan1.id, name: 'En-tête HSTS manquant', severity: 'MEDIUM', cvssScore: 6.1,
         endpoint: 'http://testphp.vulnweb.com',
         description: "L'en-tête HTTP Strict Transport Security (HSTS) est absent.",
-        recommendation: "Ajouter : Strict-Transport-Security: max-age=31536000; includeSubDomains" },
+        recommendation: "Ajouter : Strict-Transport-Security: max-age=31536000; includeSubDomains",
+        references: HDR_REFS },
       { scanId: scan1.id, name: 'En-tête X-Frame-Options manquant', severity: 'MEDIUM', cvssScore: 5.4,
         endpoint: 'http://testphp.vulnweb.com',
         description: "L'en-tête X-Frame-Options est absent, ce qui permet le clickjacking.",
-        recommendation: "Ajouter : X-Frame-Options: DENY" },
+        recommendation: "Ajouter : X-Frame-Options: DENY",
+        references: HDR_REFS },
       { scanId: scan1.id, name: 'En-tête X-Content-Type-Options manquant', severity: 'LOW', cvssScore: 3.7,
         endpoint: 'http://testphp.vulnweb.com',
         description: "L'en-tête X-Content-Type-Options est absent.",
-        recommendation: "Ajouter : X-Content-Type-Options: nosniff" },
+        recommendation: "Ajouter : X-Content-Type-Options: nosniff",
+        references: HDR_REFS },
     ],
   });
   console.log(`✅ Scan 1 créé (8 vulnérabilités) : ${scan1.targetUrl}`);
@@ -139,11 +152,13 @@ async function main() {
     data: [
       { scanId: scan2.id, name: 'En-tête HSTS manquant', severity: 'MEDIUM', cvssScore: 6.1,
         endpoint: 'http://demo.testfire.net',
-        description: "L'en-tête HSTS est absent.", recommendation: "Ajouter Strict-Transport-Security." },
+        description: "L'en-tête HSTS est absent.", recommendation: "Ajouter Strict-Transport-Security.",
+        references: ['https://owasp.org/www-project-secure-headers/','https://securityheaders.com/','https://cheatsheetseries.owasp.org/cheatsheets/HTTP_Headers_Cheat_Sheet.html'] },
       { scanId: scan2.id, name: 'Port HTTP alternatif ouvert (8080/tcp)', severity: 'MEDIUM', cvssScore: 5.3,
         endpoint: 'demo.testfire.net:8080',
         description: "Port 8080 ouvert, peut exposer une interface d'administration.",
-        recommendation: "Fermer le port si non nécessaire." },
+        recommendation: "Fermer le port si non nécessaire.",
+        references: ['https://www.iana.org/assignments/service-names-port-numbers/','https://nmap.org/book/man-port-scanning-basics.html'] },
     ],
   });
   console.log(`✅ Scan 2 créé (2 vulnérabilités) : ${scan2.targetUrl}`);

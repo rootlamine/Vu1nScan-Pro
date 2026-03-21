@@ -18,7 +18,7 @@ const REPORTS_DIR = path.resolve(process.cwd(), config.REPORTS_PATH);
 // Créer le dossier reports/ s'il n'existe pas
 fs.mkdirSync(REPORTS_DIR, { recursive: true });
 
-function buildHtml(scan: { id: string; targetUrl: string; createdAt: Date | string; completedAt?: Date | string | null }, vulns: { name: string; severity: string; cvssScore?: number | null; endpoint?: string | null; description: string; payload?: string | null; recommendation: string }[]): string {
+function buildHtml(scan: { id: string; targetUrl: string; createdAt: Date | string; completedAt?: Date | string | null }, vulns: { name: string; severity: string; cvssScore?: number | null; endpoint?: string | null; description: string; payload?: string | null; recommendation: string; references?: string[] }[]): string {
   const SEV_COLORS: Record<string, string> = {
     CRITICAL: '#FF6B6B',
     HIGH:     '#FFB347',
@@ -51,6 +51,13 @@ function buildHtml(scan: { id: string; targetUrl: string; createdAt: Date | stri
           <strong style="color:#7C6FF7;font-size:12px;">Recommandation :</strong>
           <p style="margin-top:4px;color:#374151;">${v.recommendation}</p>
         </div>
+        ${v.references && v.references.length > 0 ? `
+        <div style="background:#F0EEFF;border-radius:6px;padding:10px 12px;margin-top:10px;border-left:3px solid #7C6FF7;">
+          <strong style="color:#7C6FF7;font-size:12px;">Références :</strong>
+          <ul style="margin-top:6px;padding-left:16px;">
+            ${v.references.map(r => `<li style="margin:3px 0;"><a href="${r}" style="color:#7C6FF7;font-size:11px;word-break:break-all;">${r}</a></li>`).join('')}
+          </ul>
+        </div>` : ''}
       </div>
     </div>
   `).join('');

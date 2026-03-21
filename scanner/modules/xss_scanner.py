@@ -18,6 +18,13 @@ sys.path.insert(0, '..')
 from core.base_module import BaseModule
 
 
+XSS_REFS = [
+    "https://owasp.org/www-community/attacks/xss/",
+    "https://cwe.mitre.org/data/definitions/79.html",
+    "https://portswigger.net/web-security/cross-site-scripting",
+    "https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html",
+]
+
 XSS_PAYLOADS = [
     '<script>alert(1)</script>',
     '"><script>alert(1)</script>',
@@ -72,6 +79,7 @@ class Module(BaseModule):
                                     "Valider et filtrer les entrées côté serveur. "
                                     "Implémenter une politique Content-Security-Policy (CSP) stricte."
                                 ),
+                                references     = XSS_REFS,
                             ))
                             break
                     except requests.exceptions.RequestException:
@@ -145,6 +153,7 @@ class Module(BaseModule):
                                                 "Valider les entrées côté serveur. "
                                                 "Mettre en place une CSP stricte."
                                             ),
+                                            references     = XSS_REFS,
                                         ))
                                         break
                                 except requests.exceptions.RequestException:

@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft, Download, Search, ChevronDown, ChevronUp,
-  CheckCircle2, AlertTriangle, RefreshCw, ChevronLeft, ChevronRight,
+  CheckCircle2, AlertTriangle, RefreshCw, ChevronLeft, ChevronRight, ExternalLink,
 } from 'lucide-react';
 import { Layout } from '@/components/ui/Layout';
 import { Toast }  from '@/components/ui/Toast';
@@ -110,6 +110,32 @@ function VulnCard({ vuln, open, onToggle }: {
               {vuln.recommendation}
             </p>
           </div>
+
+          {vuln.references && vuln.references.length > 0 && (
+            <div className="rounded-xl p-4" style={{ background: '#F0EEFF', borderLeft: '3px solid #7C6FF7' }}>
+              <p className="text-xs font-bold mb-3 uppercase tracking-wide" style={{ color: '#7C6FF7' }}>
+                Pour aller plus loin
+              </p>
+              <ul className="space-y-1.5">
+                {vuln.references.map(ref => (
+                  <li key={ref}>
+                    <a
+                      href={ref}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 text-xs font-medium transition-all"
+                      style={{ color: '#7C6FF7', textDecoration: 'none' }}
+                      onMouseEnter={e => (e.currentTarget.style.textDecoration = 'underline')}
+                      onMouseLeave={e => (e.currentTarget.style.textDecoration = 'none')}
+                    >
+                      <ExternalLink size={11} style={{ flexShrink: 0 }} />
+                      {ref}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       )}
     </div>

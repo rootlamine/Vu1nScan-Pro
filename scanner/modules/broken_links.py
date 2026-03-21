@@ -5,6 +5,11 @@ import sys, os, argparse, time, json
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from core.base_module import BaseModule
 
+OSINT_REFS = [
+    "https://owasp.org/www-project-web-security-testing-guide/v42/4-Web_Application_Security_Testing/01-Information_Gathering/",
+    "https://www.sans.org/white-papers/33",
+]
+
 
 class BrokenLinks(BaseModule):
 
@@ -90,6 +95,7 @@ class BrokenLinks(BaseModule):
                         "Corrigez ou supprimez les liens cassés. "
                         "Configurez des pages d'erreur personnalisées ne révélant pas d'informations techniques."
                     ),
+                    references=OSINT_REFS,
                 ))
 
             if client_errors:
@@ -108,6 +114,7 @@ class BrokenLinks(BaseModule):
                         "Mettez en place une surveillance régulière des liens (ex: Google Search Console). "
                         "Supprimez ou redirigez (301) les URLs obsolètes."
                     ),
+                    references=OSINT_REFS,
                 ))
 
             duration = int((time.time() - start) * 1000)

@@ -11,6 +11,12 @@ import requests
 sys.path.insert(0, '..')
 from core.base_module import BaseModule
 
+SENSITIVE_FILES_REFS = [
+    "https://owasp.org/www-project-web-security-testing-guide/v42/4-Web_Application_Security_Testing/02-Configuration_and_Deployment_Management_Testing/",
+    "https://cwe.mitre.org/data/definitions/538.html",
+    "https://owasp.org/Top10/A05_2021-Security_Misconfiguration/",
+]
+
 
 SENSITIVE_FILES = [
     ("/robots.txt",          "Fichier robots.txt exposé",     "LOW",    3.1, ["Disallow", "Allow", "User-agent"]),
@@ -79,6 +85,7 @@ class Module(BaseModule):
                                 "Configurer le serveur web pour bloquer l'accès aux fichiers sensibles. "
                                 "Ne jamais déployer de fichiers de sauvegarde sur un serveur de production."
                             ),
+                            references=SENSITIVE_FILES_REFS,
                         ))
 
                 except requests.exceptions.Timeout:

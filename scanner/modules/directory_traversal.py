@@ -13,6 +13,12 @@ from urllib.parse import urlparse, parse_qs, urlencode, urlunparse, urljoin
 sys.path.insert(0, '..')
 from core.base_module import BaseModule
 
+DIR_TRAVERSAL_REFS = [
+    "https://owasp.org/www-project-web-security-testing-guide/v42/4-Web_Application_Security_Testing/07-Input_Validation_Testing/11.1-Testing_for_Local_File_Inclusion",
+    "https://cwe.mitre.org/data/definitions/22.html",
+    "https://portswigger.net/web-security/file-path-traversal",
+]
+
 
 TRAVERSAL_PAYLOADS = [
     "../../../etc/passwd",
@@ -95,6 +101,7 @@ class Module(BaseModule):
                             "Utiliser une liste blanche de chemins autorisés. "
                             "Appliquer le principe du moindre privilège sur les fichiers accessibles."
                         ),
+                        references=DIR_TRAVERSAL_REFS,
                     ))
 
         except requests.exceptions.Timeout:

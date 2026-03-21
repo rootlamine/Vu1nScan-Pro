@@ -12,6 +12,12 @@ sys.path.insert(0, '..')
 from core.base_module import BaseModule
 
 
+HTTP_HEADERS_REFS = [
+    "https://owasp.org/www-project-secure-headers/",
+    "https://securityheaders.com/",
+    "https://cheatsheetseries.owasp.org/cheatsheets/HTTP_Headers_Cheat_Sheet.html",
+]
+
 HEADERS_TO_CHECK = [
     {
         "header": "Content-Security-Policy",
@@ -82,6 +88,7 @@ class Module(BaseModule):
                         description    = check["desc"],
                         recommendation = check["rec"],
                         cve_id         = check["cve"],
+                        references     = HTTP_HEADERS_REFS,
                     ))
 
         except requests.exceptions.Timeout:

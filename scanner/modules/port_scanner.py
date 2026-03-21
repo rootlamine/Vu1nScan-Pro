@@ -14,6 +14,11 @@ from urllib.parse import urlparse
 sys.path.insert(0, '..')
 from core.base_module import BaseModule
 
+PORT_REFS = [
+    "https://www.iana.org/assignments/service-names-port-numbers/",
+    "https://nmap.org/book/man-port-scanning-basics.html",
+]
+
 
 # Ports à scanner avec leur service et sévérité associés
 PORTS = {
@@ -116,6 +121,7 @@ class Module(BaseModule):
                         f"fermer le port {port} dans le pare-feu. "
                         "Restreindre l'accès aux IP de confiance uniquement."
                     ),
+                    references     = PORT_REFS,
                 ))
 
         except Exception as e:

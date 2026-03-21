@@ -5,6 +5,12 @@ import sys, os, argparse, time, json, re
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from core.base_module import BaseModule
 
+JS_REFS = [
+    "https://owasp.org/www-project-web-security-testing-guide/v42/4-Web_Application_Security_Testing/11-Client-side_Testing/",
+    "https://cwe.mitre.org/data/definitions/312.html",
+    "https://owasp.org/www-community/vulnerabilities/Sensitive_Data_Exposure",
+]
+
 SECRET_PATTERNS = [
     # AWS
     (r"AKIA[0-9A-Z]{16}",                               "AWS Access Key ID",         "CRITICAL", 9.8),
@@ -114,6 +120,7 @@ class JavascriptAnalyzer(BaseModule):
                                     "Révoquez immédiatement les credentials compromis."
                                 ),
                                 payload=snippet,
+                                references=JS_REFS,
                             ))
 
                     # Sensitive comments
@@ -133,6 +140,7 @@ class JavascriptAnalyzer(BaseModule):
                                     "Supprimez tous les commentaires contenant des informations sensibles. "
                                     "Utilisez un minifier/obfuscator en production."
                                 ),
+                                references=JS_REFS,
                             ))
 
                 except Exception:

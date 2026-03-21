@@ -5,6 +5,11 @@ import sys, os, argparse, time, json, re
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from core.base_module import BaseModule
 
+OSINT_REFS = [
+    "https://owasp.org/www-project-web-security-testing-guide/v42/4-Web_Application_Security_Testing/01-Information_Gathering/",
+    "https://www.sans.org/white-papers/33",
+]
+
 EMAIL_RE = re.compile(r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}")
 
 CONTACT_PATHS = ["/", "/contact", "/contact-us", "/about", "/about-us",
@@ -60,6 +65,7 @@ class EmailHarvester(BaseModule):
                         "Utilisez des formulaires de contact plutôt que des adresses email directes. "
                         "Mettez en place un CAPTCHA sur les formulaires de contact."
                     ),
+                    references=OSINT_REFS,
                 ))
 
             duration = int((time.time() - start) * 1000)

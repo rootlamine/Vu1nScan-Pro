@@ -5,6 +5,11 @@ import sys, os, argparse, time, json, socket
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from core.base_module import BaseModule
 
+OSINT_REFS = [
+    "https://owasp.org/www-project-web-security-testing-guide/v42/4-Web_Application_Security_Testing/01-Information_Gathering/",
+    "https://www.sans.org/white-papers/33",
+]
+
 
 WORDLIST = [
     "www", "mail", "ftp", "admin", "api", "dev", "staging", "test",
@@ -59,6 +64,7 @@ class SubdomainEnum(BaseModule):
                         "Supprimez les sous-domaines non utilisés. Mettez en place un inventaire des actifs DNS. "
                         "Protégez les environnements de développement/staging avec une authentification."
                     ),
+                    references=OSINT_REFS,
                 ))
 
             duration = int((time.time() - start) * 1000)

@@ -6,6 +6,11 @@ import sys, os, argparse, time, json, re
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from core.base_module import BaseModule
 
+OSINT_REFS = [
+    "https://owasp.org/www-project-web-security-testing-guide/v42/4-Web_Application_Security_Testing/01-Information_Gathering/",
+    "https://www.sans.org/white-papers/33",
+]
+
 DORKS = [
     ("filetype:pdf",      "Documents PDF exposés",            "MEDIUM", 4.3),
     ("filetype:sql",      "Dumps SQL exposés",                "HIGH",   7.5),
@@ -107,6 +112,7 @@ class GoogleDorks(BaseModule):
                             "Supprimez immédiatement tout credential exposé et révoquez les clés compromises."
                         ),
                         payload=query,
+                        references=OSINT_REFS,
                     ))
 
                 time.sleep(1)  # Evite le rate-limiting

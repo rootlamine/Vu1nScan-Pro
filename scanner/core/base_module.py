@@ -32,7 +32,8 @@ class BaseModule(ABC):
 
     def vuln(self, name: str, severity: str, cvss_score: float,
              endpoint: str, description: str, recommendation: str,
-             parameter: str = None, payload: str = None, cve_id: str = None) -> dict:
+             parameter: str = None, payload: str = None, cve_id: str = None,
+             references: list = None) -> dict:
         return {
             "name":           name,
             "severity":       severity,
@@ -43,4 +44,5 @@ class BaseModule(ABC):
             "payload":        payload,
             "recommendation": recommendation,
             "cve_id":         cve_id,
+            "references":     references or [],
         }

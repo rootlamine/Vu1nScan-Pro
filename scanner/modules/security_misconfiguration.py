@@ -12,6 +12,12 @@ from urllib.parse import urljoin, urlparse
 sys.path.insert(0, '..')
 from core.base_module import BaseModule
 
+SECURITY_MISC_REFS = [
+    "https://owasp.org/www-project-web-security-testing-guide/v42/4-Web_Application_Security_Testing/",
+    "https://owasp.org/Top10/A05_2021-Security_Misconfiguration/",
+    "https://www.sans.org/white-papers/33",
+]
+
 
 ADMIN_PATHS = [
     ("/admin",           "Interface d'administration",    "HIGH",   7.2),
@@ -102,6 +108,7 @@ class Module(BaseModule):
                                 "ou le supprimer du serveur de production. "
                                 "Configurer le pare-feu applicatif pour bloquer ces chemins."
                             ),
+                            references=SECURITY_MISC_REFS,
                         ))
 
                 except requests.exceptions.Timeout:

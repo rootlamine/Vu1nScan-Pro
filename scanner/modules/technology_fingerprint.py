@@ -5,6 +5,11 @@ import sys, os, argparse, time, json, re
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from core.base_module import BaseModule
 
+OSINT_REFS = [
+    "https://owasp.org/www-project-web-security-testing-guide/v42/4-Web_Application_Security_Testing/01-Information_Gathering/",
+    "https://www.sans.org/white-papers/33",
+]
+
 SIGNATURES = {
     # CMS
     "WordPress":  [r"wp-content/", r"wp-includes/", r"wp-login\.php", r"WordPress"],
@@ -89,6 +94,7 @@ class TechnologyFingerprint(BaseModule):
                         "Gardez tous les composants à jour. "
                         "Utilisez un WAF pour masquer les signatures des frameworks."
                     ),
+                    references=OSINT_REFS,
                 ))
 
             duration = int((time.time() - start) * 1000)

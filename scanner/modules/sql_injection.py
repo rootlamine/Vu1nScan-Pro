@@ -44,6 +44,13 @@ SQL_ERROR_PATTERNS = [
 
 SQL_ERROR_RE = re.compile("|".join(SQL_ERROR_PATTERNS), re.IGNORECASE)
 
+SQL_REFS = [
+    "https://owasp.org/www-community/attacks/SQL_Injection",
+    "https://cwe.mitre.org/data/definitions/89.html",
+    "https://portswigger.net/web-security/sql-injection",
+    "https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html",
+]
+
 
 class Module(BaseModule):
 
@@ -95,6 +102,7 @@ class Module(BaseModule):
                                     "les entrées utilisateur dans les requêtes SQL."
                                 ),
                                 cve_id         = None,
+                                references     = SQL_REFS,
                             ))
                             break
 

@@ -13,6 +13,11 @@ from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 sys.path.insert(0, '..')
 from core.base_module import BaseModule
 
+OPEN_REDIRECT_REFS = [
+    "https://cwe.mitre.org/data/definitions/601.html",
+    "https://portswigger.net/kb/issues/00500100_open-redirection-reflected",
+]
+
 
 REDIRECT_PARAMS = [
     'redirect', 'redirect_uri', 'redirect_url', 'return', 'return_url',
@@ -99,6 +104,7 @@ class Module(BaseModule):
                                     "Valider les URLs de redirection par rapport à une liste blanche de domaines autorisés. "
                                     "Ne jamais utiliser directement les entrées utilisateur comme URL de redirection."
                                 ),
+                                references=OPEN_REDIRECT_REFS,
                             ))
                             break
                     except requests.exceptions.TooManyRedirects:
