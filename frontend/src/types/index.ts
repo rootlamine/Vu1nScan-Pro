@@ -1,10 +1,11 @@
 // ─── Enums ────────────────────────────────────────────────────────────────────
 
-export type Role         = 'USER' | 'ADMIN';
-export type ScanStatus   = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED';
-export type Severity     = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
-export type ModuleStatus = 'PENDING' | 'RUNNING' | 'DONE' | 'ERROR';
-export type ReportFormat = 'PDF' | 'JSON';
+export type Role           = 'USER' | 'ADMIN';
+export type ScanStatus     = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED';
+export type Severity       = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+export type ModuleStatus   = 'PENDING' | 'RUNNING' | 'DONE' | 'ERROR';
+export type ReportFormat   = 'PDF' | 'JSON';
+export type ModuleCategory = 'SECURITY' | 'NETWORK' | 'OSINT' | 'SCRAPING';
 
 // ─── Models ───────────────────────────────────────────────────────────────────
 
@@ -25,6 +26,7 @@ export interface ScanModule {
   description:    string;
   isActive:       boolean;
   defaultEnabled: boolean;
+  category:       ModuleCategory;
 }
 
 export interface ScanModuleResult {

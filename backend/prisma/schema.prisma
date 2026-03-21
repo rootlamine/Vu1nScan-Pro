@@ -37,6 +37,13 @@ enum ModuleStatus {
   ERROR
 }
 
+enum ModuleCategory {
+  SECURITY
+  NETWORK
+  OSINT
+  SCRAPING
+}
+
 model User {
   id           String   @id @default(uuid())
   username     String   @unique
@@ -89,6 +96,7 @@ model ScanModule {
   description    String
   isActive       Boolean            @default(true)
   defaultEnabled Boolean            @default(true)
+  category       ModuleCategory     @default(SECURITY)
   results        ScanModuleResult[]
 }
 

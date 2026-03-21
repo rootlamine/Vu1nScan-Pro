@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft, Download, Search, ChevronDown, ChevronUp,
-  CheckCircle2, AlertTriangle, RefreshCw, Code2,
+  CheckCircle2, AlertTriangle, RefreshCw, ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { Layout } from '@/components/ui/Layout';
 import { Toast }  from '@/components/ui/Toast';
@@ -11,7 +11,9 @@ import api from '@/services/api';
 import type { Vulnerability, VulnStats } from '@/types';
 
 type SeverityFilter = '' | 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
-type SortOption = 'cvss_desc' | 'cvss_asc' | 'name_asc';
+type SortOption     = 'cvss_desc' | 'cvss_asc' | 'name_asc';
+
+const PAGE_SIZE = 20;
 
 const SEV: Record<string, { label: string; bg: string; color: string; border: string }> = {
   CRITICAL: { label: 'CRITIQUE', bg: '#FFF0F0', color: '#FF6B6B', border: '#FF6B6B' },
@@ -33,12 +35,10 @@ function VulnCard({ vuln, open, onToggle }: {
         style={{ background: open ? `${c.bg}60` : 'transparent' }}
         onClick={onToggle}
       >
-        {/* Severity pill */}
         <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-black shrink-0"
               style={{ background: c.bg, color: c.color }}>
           {c.label}
         </span>
-        {/* Name + endpoint */}
         <div className="flex-1 min-w-0">
           <p className="font-bold text-navy text-sm">{vuln.name}</p>
           {vuln.endpoint && (
@@ -47,7 +47,6 @@ function VulnCard({ vuln, open, onToggle }: {
             </p>
           )}
         </div>
-        {/* CVSS score */}
         {vuln.cvssScore != null && (
           <span className="font-mono text-sm font-black shrink-0 px-2 py-0.5 rounded"
                 style={{ background: c.bg, color: c.color }}>
@@ -61,7 +60,6 @@ function VulnCard({ vuln, open, onToggle }: {
 
       {open && (
         <div className="px-5 pb-5 space-y-4" style={{ borderTop: `1px solid ${c.border}30` }}>
-          {/* Tags */}
           <div className="flex items-center gap-2 flex-wrap pt-3">
             {vuln.cveId && (
               <span className="text-xs font-mono px-2.5 py-0.5 rounded-full font-semibold"
@@ -77,7 +75,6 @@ function VulnCard({ vuln, open, onToggle }: {
             )}
           </div>
 
-          {/* Description + Payload */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-wider mb-2 flex items-center gap-1"
@@ -97,16 +94,13 @@ function VulnCard({ vuln, open, onToggle }: {
                 <pre className="rounded-xl px-4 py-3 text-xs font-mono overflow-x-auto leading-relaxed relative"
                      style={{ background: '#1C1C2E', color: '#A8FFD8', minHeight: 80 }}>
                   <span className="absolute top-2 right-3 text-[10px] uppercase tracking-wider opacity-40"
-                        style={{ color: '#A8FFD8' }}>
-                    PAYLOAD
-                  </span>
+                        style={{ color: '#A8FFD8' }}>PAYLOAD</span>
                   {vuln.payload}
                 </pre>
               </div>
             )}
           </div>
 
-          {/* Recommandation */}
           <div className="rounded-xl p-4" style={{ background: '#E8FFFE', borderLeft: '3px solid #4ECDC4' }}>
             <p className="text-xs font-bold mb-2 flex items-center gap-1.5 uppercase tracking-wide"
                style={{ color: '#2A9D8F' }}>
@@ -128,10 +122,11 @@ export default function ScanResultsPage() {
   const navigate    = useNavigate();
   const queryClient = useQueryClient();
 
-  const [sevFilter,  setSevFilter]  = useState<SeverityFilter>('');
-  const [search,     setSearch]     = useState('');
-  const [sort,       setSort]       = useState<SortOption>('cvss_desc');
-  const [openVuln,   setOpenVuln]   = useState<string | null>(null);
+  const [sevFilter, setSevFilter] = useState<SeverityFilter>('');
+  const [search,    setSearch]    = useState('');
+  const [sort,      setSort]      = useState<SortOption>('cvss_desc');
+  const [openVuln,  setOpenVuln]  = useState<string | null>(null);
+  const [page,      setPage]      = useState(1);
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
 
   const { data: scanData } = useQuery<{ data: { data: { targetUrl: string; status: string; startedAt: string; completedAt: string; moduleResults?: unknown[] } } }>({
@@ -154,12 +149,26 @@ export default function ScanResultsPage() {
     queryKey: ['vulns', id, sevFilter, search, sort],
     queryFn:  () => api.get(`/scans/${id}/vulnerabilities?${params}`),
   });
-  let vulns = vulnsData?.data?.data ?? [];
+  let allVulns = vulnsData?.data?.data ?? [];
 
   // Client-side sort
-  if (sort === 'cvss_desc') vulns = [...vulns].sort((a, b) => (b.cvssScore ?? 0) - (a.cvssScore ?? 0));
-  if (sort === 'cvss_asc')  vulns = [...vulns].sort((a, b) => (a.cvssScore ?? 0) - (b.cvssScore ?? 0));
-  if (sort === 'name_asc')  vulns = [...vulns].sort((a, b) => a.name.localeCompare(b.name));
+  if (sort === 'cvss_desc') allVulns = [...allVulns].sort((a, b) => (b.cvssScore ?? 0) - (a.cvssScore ?? 0));
+  if (sort === 'cvss_asc')  allVulns = [...allVulns].sort((a, b) => (a.cvssScore ?? 0) - (b.cvssScore ?? 0));
+  if (sort === 'name_asc')  allVulns = [...allVulns].sort((a, b) => a.name.localeCompare(b.name));
+
+  // Pagination
+  const totalPages = Math.max(1, Math.ceil(allVulns.length / PAGE_SIZE));
+  const vulns      = allVulns.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  const changePage = (p: number) => {
+    setPage(p);
+    setOpenVuln(null);
+  };
+
+  // Reset to page 1 when filters change
+  const handleSevFilter = (v: SeverityFilter) => { setSevFilter(v); setPage(1); setOpenVuln(null); };
+  const handleSearch    = (v: string)           => { setSearch(v);   setPage(1); };
+  const handleSort      = (v: SortOption)        => { setSort(v);    setPage(1); };
 
   const { mutate: generatePDF, isPending: generating } = useMutation({
     mutationFn: () => api.post(`/scans/${id}/report`, {}),
@@ -180,22 +189,20 @@ export default function ScanResultsPage() {
     { v: 'LOW' as SeverityFilter,      label: `Faibles (${stats?.low ?? 0})` },
   ];
 
-  // Scan duration
   let duration = '';
   if (scan?.startedAt && scan?.completedAt) {
-    const ms = new Date(scan.completedAt).getTime() - new Date(scan.startedAt).getTime();
+    const ms  = new Date(scan.completedAt).getTime() - new Date(scan.startedAt).getTime();
     const min = Math.floor(ms / 60000);
     const sec = Math.floor((ms % 60000) / 1000);
     duration = `${min} min ${sec} sec`;
   }
-
   const moduleCount = (scan?.moduleResults as unknown[] | undefined)?.length ?? 0;
 
   return (
     <Layout>
       {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
 
-      {/* ── Top bar ──────────────────────────────────────────────── */}
+      {/* Top bar */}
       <div className="flex items-center justify-between px-8 py-4 bg-white"
            style={{ borderBottom: '1px solid #EDE8FF' }}>
         <div className="flex items-center gap-3">
@@ -228,7 +235,7 @@ export default function ScanResultsPage() {
       </div>
 
       <div className="px-8 py-6 space-y-5">
-        {/* ── Bannière scan ────────────────────────────────────────── */}
+        {/* Bannière scan */}
         <div className="bg-white rounded-2xl p-5" style={{ border: '1px solid #EDE8FF' }}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -237,14 +244,13 @@ export default function ScanResultsPage() {
                 <CheckCircle2 size={20} style={{ color: '#4ECDC4' }} />
               </div>
               <div>
-                <p className="font-mono font-bold text-navy text-base">
-                  {scan?.targetUrl ?? '…'}
-                </p>
+                <p className="font-mono font-bold text-navy text-base">{scan?.targetUrl ?? '…'}</p>
                 <div className="flex items-center gap-3 mt-1 text-xs" style={{ color: '#6B6B8A' }}>
                   {scan?.startedAt && (
-                    <span>
-                      📅 {new Date(scan.startedAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                    </span>
+                    <span>📅 {new Date(scan.startedAt).toLocaleDateString('fr-FR', {
+                      day: 'numeric', month: 'long', year: 'numeric',
+                      hour: '2-digit', minute: '2-digit',
+                    })}</span>
                   )}
                   {duration && <span>⏱ {duration}</span>}
                   {moduleCount > 0 && <span>⚙ {moduleCount} modules</span>}
@@ -252,8 +258,6 @@ export default function ScanResultsPage() {
                 </div>
               </div>
             </div>
-
-            {/* Severity counts */}
             <div className="flex items-center gap-3">
               {[
                 { key: 'critical', count: stats?.critical ?? 0, color: '#FF6B6B', label: 'CRITIQUE' },
@@ -262,43 +266,36 @@ export default function ScanResultsPage() {
                 { key: 'low',      count: stats?.low      ?? 0, color: '#4ECDC4', label: 'FAIBLE'   },
               ].map(s => (
                 <div key={s.key} className="text-center">
-                  <p className="font-mono font-black text-xl" style={{ color: s.color }}>
-                    {s.count}
-                  </p>
-                  <p className="text-[9px] font-bold uppercase tracking-wide" style={{ color: s.color }}>
-                    {s.label}
-                  </p>
+                  <p className="font-mono font-black text-xl" style={{ color: s.color }}>{s.count}</p>
+                  <p className="text-[9px] font-bold uppercase tracking-wide" style={{ color: s.color }}>{s.label}</p>
                 </div>
               ))}
             </div>
           </div>
         </div>
 
-        {/* ── Filtres ──────────────────────────────────────────────── */}
+        {/* Filtres */}
         <div className="flex items-center gap-3 flex-wrap">
-          {/* Search */}
           <div className="relative" style={{ minWidth: 220 }}>
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#6B6B8A' }} />
             <input
               value={search}
-              onChange={e => setSearch(e.target.value)}
+              onChange={e => handleSearch(e.target.value)}
               placeholder="Rechercher une vulnérabilité, un end..."
               className="w-full pl-9 pr-4 py-2.5 rounded-xl text-sm outline-none"
               style={{ border: '1px solid #EDE8FF', background: '#fff' }}
             />
           </div>
 
-          {/* Tab filters */}
           <div className="flex gap-1 flex-wrap">
             {FILTER_TABS.map(f => (
               <button
                 key={f.v}
-                onClick={() => setSevFilter(f.v)}
+                onClick={() => handleSevFilter(f.v)}
                 className="px-3.5 py-2 rounded-xl text-sm font-semibold transition-all"
-                style={
-                  sevFilter === f.v
-                    ? { background: '#1C1C2E', color: '#fff' }
-                    : { background: '#fff', color: '#6B6B8A', border: '1px solid #EDE8FF' }
+                style={sevFilter === f.v
+                  ? { background: '#1C1C2E', color: '#fff' }
+                  : { background: '#fff', color: '#6B6B8A', border: '1px solid #EDE8FF' }
                 }
               >
                 {f.label}
@@ -306,10 +303,9 @@ export default function ScanResultsPage() {
             ))}
           </div>
 
-          {/* Sort */}
           <select
             value={sort}
-            onChange={e => setSort(e.target.value as SortOption)}
+            onChange={e => handleSort(e.target.value as SortOption)}
             className="ml-auto px-3 py-2.5 rounded-xl text-sm outline-none"
             style={{ border: '1px solid #EDE8FF', background: '#fff', color: '#6B6B8A' }}
           >
@@ -319,10 +315,10 @@ export default function ScanResultsPage() {
           </select>
         </div>
 
-        {/* ── Vulnérabilités ───────────────────────────────────────── */}
+        {/* Vulnérabilités */}
         {isLoading ? (
           <div className="text-center py-12" style={{ color: '#6B6B8A' }}>Chargement…</div>
-        ) : vulns.length === 0 ? (
+        ) : allVulns.length === 0 ? (
           <div className="bg-white rounded-2xl py-14 text-center" style={{ border: '1px solid #EDE8FF' }}>
             <AlertTriangle size={28} className="mx-auto mb-3" style={{ color: '#EDE8FF' }} />
             <p className="font-medium text-navy">
@@ -330,16 +326,75 @@ export default function ScanResultsPage() {
             </p>
           </div>
         ) : (
-          <div className="space-y-3">
-            {vulns.map(vuln => (
-              <VulnCard
-                key={vuln.id}
-                vuln={vuln}
-                open={openVuln === vuln.id}
-                onToggle={() => setOpenVuln(openVuln === vuln.id ? null : vuln.id)}
-              />
-            ))}
-          </div>
+          <>
+            {/* Results count */}
+            <div className="flex items-center justify-between text-xs" style={{ color: '#6B6B8A' }}>
+              <span>
+                {allVulns.length} vulnérabilité{allVulns.length > 1 ? 's' : ''}
+                {totalPages > 1 && ` — page ${page}/${totalPages}`}
+              </span>
+              {totalPages > 1 && (
+                <span>{(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, allVulns.length)} affichées</span>
+              )}
+            </div>
+
+            <div className="space-y-3">
+              {vulns.map(vuln => (
+                <VulnCard
+                  key={vuln.id}
+                  vuln={vuln}
+                  open={openVuln === vuln.id}
+                  onToggle={() => setOpenVuln(openVuln === vuln.id ? null : vuln.id)}
+                />
+              ))}
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-4">
+                <span className="text-sm" style={{ color: '#6B6B8A' }}>
+                  Page {page} sur {totalPages}
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => changePage(Math.max(1, page - 1))}
+                    disabled={page === 1}
+                    className="w-9 h-9 rounded-xl flex items-center justify-center transition-all disabled:opacity-40"
+                    style={{ border: '1px solid #EDE8FF', color: '#6B6B8A' }}
+                  >
+                    <ChevronLeft size={16} />
+                  </button>
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    const p = page <= 3 ? i + 1
+                      : page >= totalPages - 2 ? totalPages - 4 + i
+                      : page - 2 + i;
+                    if (p < 1 || p > totalPages) return null;
+                    return (
+                      <button
+                        key={p}
+                        onClick={() => changePage(p)}
+                        className="w-9 h-9 rounded-xl flex items-center justify-center text-sm font-semibold transition-all"
+                        style={p === page
+                          ? { background: '#1C1C2E', color: '#fff' }
+                          : { border: '1px solid #EDE8FF', color: '#6B6B8A' }
+                        }
+                      >
+                        {p}
+                      </button>
+                    );
+                  })}
+                  <button
+                    onClick={() => changePage(Math.min(totalPages, page + 1))}
+                    disabled={page === totalPages}
+                    className="w-9 h-9 rounded-xl flex items-center justify-center transition-all disabled:opacity-40"
+                    style={{ border: '1px solid #EDE8FF', color: '#6B6B8A' }}
+                  >
+                    <ChevronRight size={16} />
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
     </Layout>

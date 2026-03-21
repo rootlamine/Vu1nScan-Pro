@@ -29,24 +29,37 @@ async function main() {
 
   // ── 2. Modules de scan ─────────────────────────────────────────────────────
   const modulesData = [
-    { slug: 'sql_injection',            name: 'SQL Injection',              description: "Injecte des payloads dans les paramètres GET/POST. Détecte les erreurs SQL et comportements anormaux." },
-    { slug: 'xss_scanner',              name: 'XSS Detection',              description: "Teste les formulaires HTML et les paramètres URL pour le Cross-Site Scripting réfléchi." },
-    { slug: 'port_scanner',             name: 'Port Scanner',               description: "Connexion TCP sur 20 ports communs (MySQL, Redis, RDP, SMB...). Évalue l'exposition réseau." },
-    { slug: 'http_headers',             name: 'HTTP Headers',               description: "Vérifie la présence de CSP, HSTS, X-Frame-Options, X-Content-Type-Options et Referrer-Policy." },
-    { slug: 'ssl_checker',              name: 'SSL/TLS Checker',            description: "Vérifie le certificat SSL/TLS (expiration, version TLS, chiffrements faibles)." },
-    { slug: 'csrf_scanner',             name: 'CSRF Scanner',               description: "Détecte l'absence de token CSRF dans les formulaires POST et les cookies sans SameSite." },
-    { slug: 'directory_traversal',      name: 'Directory Traversal',        description: "Teste les vulnérabilités de type path traversal (../../etc/passwd) sur les paramètres." },
-    { slug: 'open_redirect',            name: 'Open Redirect',              description: "Détecte les redirections ouvertes non validées exploitables pour le phishing." },
-    { slug: 'security_misconfiguration',name: 'Security Misconfiguration',  description: "Détecte les pages admin exposées (/admin, /phpmyadmin, /.env, /.git, phpinfo)." },
-    { slug: 'sensitive_files',          name: 'Sensitive Files',            description: "Détecte les fichiers sensibles exposés (backup.zip, .env, config.php, dump.sql)." },
+    // ── Sécurité ───────────────────────────────────────────────────────────
+    { slug: 'sql_injection',            name: 'Injection SQL',              category: 'SECURITY', description: "Injecte des payloads dans les paramètres GET/POST. Détecte les erreurs SQL et comportements anormaux." },
+    { slug: 'xss_scanner',              name: 'Cross-Site Scripting',       category: 'SECURITY', description: "Teste les formulaires HTML et les paramètres URL pour le Cross-Site Scripting réfléchi." },
+    { slug: 'ssl_checker',              name: 'SSL/TLS Checker',            category: 'SECURITY', description: "Vérifie le certificat SSL/TLS (expiration, version TLS, chiffrements faibles)." },
+    { slug: 'csrf_scanner',             name: 'CSRF Scanner',               category: 'SECURITY', description: "Détecte l'absence de token CSRF dans les formulaires POST et les cookies sans SameSite." },
+    { slug: 'directory_traversal',      name: 'Directory Traversal',        category: 'SECURITY', description: "Teste les vulnérabilités de type path traversal (../../etc/passwd) sur les paramètres." },
+    { slug: 'open_redirect',            name: 'Open Redirect',              category: 'SECURITY', description: "Détecte les redirections ouvertes non validées exploitables pour le phishing." },
+    { slug: 'security_misconfiguration',name: 'Security Misconfiguration',  category: 'SECURITY', description: "Détecte les pages admin exposées (/admin, /phpmyadmin, /.env, /.git, phpinfo)." },
+    { slug: 'sensitive_files',          name: 'Sensitive Files',            category: 'SECURITY', description: "Détecte les fichiers sensibles exposés (backup.zip, .env, config.php, dump.sql)." },
+    // ── Réseau ────────────────────────────────────────────────────────────
+    { slug: 'port_scanner',             name: 'Scan de ports',              category: 'NETWORK',  description: "Connexion TCP sur 20 ports communs (MySQL, Redis, RDP, SMB...). Évalue l'exposition réseau." },
+    { slug: 'http_headers',             name: 'En-têtes HTTP',              category: 'NETWORK',  description: "Vérifie la présence de CSP, HSTS, X-Frame-Options, X-Content-Type-Options et Referrer-Policy." },
+    // ── OSINT ─────────────────────────────────────────────────────────────
+    { slug: 'whois_lookup',             name: 'WHOIS Lookup',               category: 'OSINT',    description: "Récupère les informations WHOIS publiques du domaine (registrar, dates, nameservers, pays)." },
+    { slug: 'dns_recon',                name: 'DNS Reconnaissance',         category: 'OSINT',    description: "Énumère les enregistrements DNS (A, MX, NS, TXT) et détecte les transferts de zone ouverts." },
+    { slug: 'subdomain_enum',           name: 'Énumération sous-domaines',  category: 'OSINT',    description: "Énumère les sous-domaines courants (www, mail, api, admin...) et résout leurs adresses IP." },
+    { slug: 'email_harvester',          name: 'Email Harvester',            category: 'OSINT',    description: "Scrape les adresses email exposées sur le site web cible (HTML, pages contact, métadonnées)." },
+    { slug: 'technology_fingerprint',   name: 'Tech Fingerprinting',        category: 'OSINT',    description: "Détecte les technologies utilisées : CMS, frameworks, serveurs, langages, CDN et analytics." },
+    { slug: 'google_dorks',             name: 'Google Dorks',               category: 'OSINT',    description: "Génère des dorks de recherche (filetype:pdf, inurl:admin, intext:password) sur le domaine cible." },
+    // ── Scraping ──────────────────────────────────────────────────────────
+    { slug: 'metadata_extractor',       name: 'Metadata Extractor',         category: 'SCRAPING', description: "Extrait les métadonnées des PDF et images (auteurs, logiciels, chemins internes, dates)." },
+    { slug: 'broken_links',             name: 'Broken Links',               category: 'SCRAPING', description: "Crawl le site et détecte les liens cassés (404, 500) selon la profondeur configurée." },
+    { slug: 'javascript_analyzer',      name: 'JavaScript Analyzer',        category: 'SCRAPING', description: "Analyse les fichiers JS : API keys, tokens AWS/Google, JWTs, endpoints cachés, commentaires sensibles." },
   ];
 
   const modules = [];
   for (const m of modulesData) {
     const mod = await prisma.scanModule.upsert({
       where:  { slug: m.slug },
-      update: {},
-      create: { ...m, isActive: true, defaultEnabled: true },
+      update: { name: m.name, description: m.description, category: m.category as 'SECURITY'|'NETWORK'|'OSINT'|'SCRAPING' },
+      create: { slug: m.slug, name: m.name, description: m.description, category: m.category as 'SECURITY'|'NETWORK'|'OSINT'|'SCRAPING', isActive: true, defaultEnabled: true },
     });
     modules.push(mod);
   }

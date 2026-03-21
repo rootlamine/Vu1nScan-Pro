@@ -5,8 +5,18 @@ import { sendSuccess }  from '@/utils/response';
 
 const scanService = new ScanService();
 
+const IP_RE = /^(\d{1,3}\.){3}\d{1,3}(:\d{1,5})?$/;
+
 export const createScanSchema = z.object({
-  targetUrl:   z.string().url('URL invalide'),
+  targetUrl: z.string().transform((val, ctx) => {
+    const trimmed = val.trim();
+    // Accept plain IP or IP:port — prefix with http://
+    if (IP_RE.test(trimmed)) return `http://${trimmed}`;
+    // Accept valid URL as-is
+    try { new URL(trimmed); return trimmed; } catch { /* fall through */ }
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'URL ou adresse IP invalide' });
+    return z.NEVER;
+  }),
   description: z.string().max(500).optional(),
   depth:       z.enum(['fast', 'normal', 'deep']).default('normal'),
   threads:     z.number().int().min(1).max(20).default(5),
