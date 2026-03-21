@@ -1,14 +1,14 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  Users, Shield, BarChart3, ScanLine, ShieldAlert, Loader, type LucideIcon,
+  Users, Shield, BarChart3, ScanLine, ShieldAlert, Loader, Search, type LucideIcon,
 } from 'lucide-react';
 import { useState } from 'react';
 import { Layout, TopBar } from '@/components/ui/Layout';
 import { Toast }   from '@/components/ui/Toast';
 import { useAuth } from '@/hooks/useAuth';
 import api from '@/services/api';
-import type { User, ScanModule, AdminStats } from '@/types';
+import type { User, ScanModule, AdminStats, ModuleCategory } from '@/types';
 
 /* ── KPI Card ─────────────────────────────────────────────────────── */
 function KpiCard({ title, value, icon: Icon, topColor, iconBg, iconColor }: {
@@ -37,7 +37,10 @@ export default function AdminPage() {
   const navigate     = useNavigate();
   const location     = useLocation();
   const queryClient  = useQueryClient();
-  const [toast, setToast] = useState<{ msg: string; type: 'success'|'error' } | null>(null);
+  const [toast, setToast]         = useState<{ msg: string; type: 'success'|'error' } | null>(null);
+  const [modSearch, setModSearch]  = useState('');
+  const [modCat, setModCat]        = useState<'ALL' | ModuleCategory>('ALL');
+  const [modPage, setModPage]      = useState(1);
 
   if (me && me.role !== 'ADMIN') { navigate('/dashboard'); return null; }
 
@@ -140,35 +143,153 @@ export default function AdminPage() {
         )}
 
         {/* ── Modules ──────────────────────────────────────────────── */}
-        {tab === 'modules' && (
-          <div className="space-y-3">
-            {modules.map(mod => (
-              <div key={mod.id} className="bg-white rounded-xl px-5 py-4 flex items-center gap-4"
-                   style={{ border: '1px solid #EDE8FF' }}>
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                     style={{ background: mod.isActive ? '#F0EEFF' : '#F8F8F8' }}>
-                  <Shield size={16} style={{ color: mod.isActive ? '#7C6FF7' : '#6B6B8A' }} />
+        {tab === 'modules' && (() => {
+          const MOD_PAGE_SIZE = 8;
+          const CAT_TABS: { key: 'ALL' | ModuleCategory; label: string; color: string }[] = [
+            { key: 'ALL',      label: 'Tous',      color: '#7C6FF7' },
+            { key: 'SECURITY', label: 'Sécurité',  color: '#FF6B6B' },
+            { key: 'NETWORK',  label: 'Réseau',    color: '#4ECDC4' },
+            { key: 'OSINT',    label: 'OSINT',     color: '#7C6FF7' },
+            { key: 'SCRAPING', label: 'Scraping',  color: '#FFB347' },
+          ];
+          const CAT_BG: Record<string, string> = {
+            SECURITY: '#FFF0F0', NETWORK: '#E8FFFE', OSINT: '#F0EEFF', SCRAPING: '#FFF8ED',
+          };
+
+          const q = modSearch.toLowerCase();
+          const filtered = modules.filter(m =>
+            (modCat === 'ALL' || m.category === modCat) &&
+            (q === '' || m.name.toLowerCase().includes(q) || m.description.toLowerCase().includes(q))
+          );
+          const totalPages = Math.max(1, Math.ceil(filtered.length / MOD_PAGE_SIZE));
+          const safePage   = Math.min(modPage, totalPages);
+          const paged      = filtered.slice((safePage - 1) * MOD_PAGE_SIZE, safePage * MOD_PAGE_SIZE);
+
+          const goPage = (p: number) => setModPage(Math.max(1, Math.min(p, totalPages)));
+          const resetPage = () => setModPage(1);
+
+          return (
+            <div className="space-y-4">
+              {/* Search + category filters */}
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+                {/* Search bar */}
+                <div className="relative flex-1">
+                  <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: '#6B6B8A' }} />
+                  <input
+                    value={modSearch}
+                    onChange={e => { setModSearch(e.target.value); resetPage(); }}
+                    placeholder="Rechercher un module..."
+                    className="w-full pl-9 pr-4 py-2.5 rounded-xl text-sm outline-none transition-all bg-white"
+                    style={{ border: '1.5px solid #EDE8FF', color: '#1C1C2E' }}
+                    onFocus={e => { e.currentTarget.style.borderColor = '#7C6FF7'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(124,111,247,.12)'; }}
+                    onBlur={e =>  { e.currentTarget.style.borderColor = '#EDE8FF'; e.currentTarget.style.boxShadow = 'none'; }}
+                  />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-navy text-sm">{mod.name}</p>
-                  <p className="text-xs mt-0.5" style={{ color: '#6B6B8A' }}>{mod.description}</p>
+                {/* Category tabs */}
+                <div className="flex gap-1.5 flex-wrap">
+                  {CAT_TABS.map(ct => (
+                    <button
+                      key={ct.key}
+                      onClick={() => { setModCat(ct.key); resetPage(); }}
+                      className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+                      style={modCat === ct.key
+                        ? { background: ct.color, color: '#fff', border: `1.5px solid ${ct.color}` }
+                        : { background: '#FAFAFA', color: '#6B6B8A', border: '1.5px solid #EDE8FF' }}
+                    >
+                      {ct.label}
+                    </button>
+                  ))}
                 </div>
-                <label className="flex items-center gap-1.5 text-xs cursor-pointer" style={{ color: '#6B6B8A' }}>
-                  <input type="checkbox" checked={mod.isActive}
-                         onChange={e => updateModule({ id: mod.id, data: { isActive: e.target.checked } })}
-                         className="accent-violet" />
-                  Actif
-                </label>
-                <label className="flex items-center gap-1.5 text-xs cursor-pointer" style={{ color: '#6B6B8A' }}>
-                  <input type="checkbox" checked={mod.defaultEnabled}
-                         onChange={e => updateModule({ id: mod.id, data: { defaultEnabled: e.target.checked } })}
-                         className="accent-violet" />
-                  Par défaut
-                </label>
               </div>
-            ))}
-          </div>
-        )}
+
+              {/* Counter */}
+              <p className="text-xs font-semibold" style={{ color: '#6B6B8A' }}>
+                {filtered.length} module{filtered.length !== 1 ? 's' : ''}{modSearch || modCat !== 'ALL' ? ' trouvés' : ''}
+              </p>
+
+              {/* Module list */}
+              <div className="space-y-3">
+                {paged.length === 0 ? (
+                  <div className="bg-white rounded-xl px-5 py-8 text-center text-sm"
+                       style={{ border: '1px solid #EDE8FF', color: '#6B6B8A' }}>
+                    Aucun module trouvé
+                  </div>
+                ) : paged.map(mod => (
+                  <div key={mod.id} className="bg-white rounded-xl px-5 py-4 flex items-center gap-4"
+                       style={{ border: '1px solid #EDE8FF' }}>
+                    <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                         style={{ background: mod.isActive ? '#F0EEFF' : '#F8F8F8' }}>
+                      <Shield size={16} style={{ color: mod.isActive ? '#7C6FF7' : '#6B6B8A' }} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <p className="font-semibold text-navy text-sm">{mod.name}</p>
+                        {mod.category && (
+                          <span className="text-xs font-semibold px-1.5 py-0.5 rounded-md"
+                                style={{ background: CAT_BG[mod.category] ?? '#F0EEFF', color: CAT_TABS.find(t => t.key === mod.category)?.color ?? '#7C6FF7' }}>
+                            {mod.category}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs" style={{ color: '#6B6B8A' }}>{mod.description}</p>
+                    </div>
+                    <label className="flex items-center gap-1.5 text-xs cursor-pointer" style={{ color: '#6B6B8A' }}>
+                      <input type="checkbox" checked={mod.isActive}
+                             onChange={e => updateModule({ id: mod.id, data: { isActive: e.target.checked } })}
+                             className="accent-violet" />
+                      Actif
+                    </label>
+                    <label className="flex items-center gap-1.5 text-xs cursor-pointer" style={{ color: '#6B6B8A' }}>
+                      <input type="checkbox" checked={mod.defaultEnabled}
+                             onChange={e => updateModule({ id: mod.id, data: { defaultEnabled: e.target.checked } })}
+                             className="accent-violet" />
+                      Par défaut
+                    </label>
+                  </div>
+                ))}
+              </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between pt-1">
+                  <p className="text-xs" style={{ color: '#6B6B8A' }}>
+                    Page {safePage} sur {totalPages}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => goPage(safePage - 1)}
+                      disabled={safePage === 1}
+                      className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all disabled:opacity-40"
+                      style={{ border: '1.5px solid #EDE8FF', color: '#6B6B8A', background: '#FAFAFA' }}
+                    >
+                      Précédent
+                    </button>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                      <button
+                        key={p}
+                        onClick={() => goPage(p)}
+                        className="w-8 h-8 rounded-lg text-xs font-semibold transition-all"
+                        style={p === safePage
+                          ? { background: '#1C1C2E', color: '#fff', border: '1.5px solid #1C1C2E' }
+                          : { border: '1.5px solid #EDE8FF', color: '#6B6B8A', background: '#FAFAFA' }}
+                      >
+                        {p}
+                      </button>
+                    ))}
+                    <button
+                      onClick={() => goPage(safePage + 1)}
+                      disabled={safePage === totalPages}
+                      className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all disabled:opacity-40"
+                      style={{ border: '1.5px solid #EDE8FF', color: '#6B6B8A', background: '#FAFAFA' }}
+                    >
+                      Suivant
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* ── Statistiques ─────────────────────────────────────────── */}
         {tab === 'stats' && (
