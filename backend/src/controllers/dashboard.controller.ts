@@ -60,10 +60,10 @@ export async function getDashboardStats(req: Request, res: Response, next: NextF
       }),
     ]);
 
-    // Histogramme 30 jours
+    // Histogramme 30 jours (aujourd'hui inclus)
     const dailyMap: Record<string, number> = {};
-    for (let i = 0; i < 30; i++) {
-      const d = new Date(thirtyDaysAgo.getTime() + i * 24 * 60 * 60 * 1000);
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
       const key = d.toISOString().slice(0, 10);
       dailyMap[key] = 0;
     }
@@ -71,7 +71,7 @@ export async function getDashboardStats(req: Request, res: Response, next: NextF
       const key = new Date(s.createdAt).toISOString().slice(0, 10);
       if (key in dailyMap) dailyMap[key]++;
     }
-    const scanHistory = Object.entries(dailyMap).map(([date, count]) => ({ date, count }));
+    const scanHistory = Object.entries(dailyMap).sort().map(([date, count]) => ({ date, count }));
 
     // Répartition sévérités
     const sevMap: Record<string, number> = { CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0 };
