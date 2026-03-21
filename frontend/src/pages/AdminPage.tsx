@@ -1,14 +1,185 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  Users, Shield, BarChart3, ScanLine, ShieldAlert, Loader, Search, type LucideIcon,
+  Users, Shield, BarChart3, ScanLine, ShieldAlert, Loader, Search, X, Plus, Mail, Lock,
+  User as UserIcon, LayoutList, LayoutGrid, Globe, Wifi, type LucideIcon,
 } from 'lucide-react';
 import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { Layout, TopBar } from '@/components/ui/Layout';
 import { Toast }   from '@/components/ui/Toast';
 import { useAuth } from '@/hooks/useAuth';
 import api from '@/services/api';
 import type { User, ScanModule, AdminStats, ModuleCategory } from '@/types';
+
+/* ── Create User Modal ───────────────────────────────────────────── */
+const createUserSchema = z.object({
+  username: z.string().min(3, 'Minimum 3 caractères').max(30),
+  email:    z.string().email('Email invalide'),
+  password: z.string().min(8, 'Minimum 8 caractères'),
+  confirm:  z.string(),
+  role:     z.enum(['USER', 'ADMIN']),
+  isActive: z.boolean(),
+}).refine(d => d.password === d.confirm, {
+  message: 'Les mots de passe ne correspondent pas',
+  path: ['confirm'],
+});
+type CreateUserForm = z.infer<typeof createUserSchema>;
+
+function CreateUserModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+  const { register, handleSubmit, formState: { errors, isSubmitting }, setError } =
+    useForm<CreateUserForm>({
+      resolver: zodResolver(createUserSchema),
+      defaultValues: { role: 'USER', isActive: true },
+    });
+
+  const inputStyle = (hasErr: boolean) => ({
+    border:     `1.5px solid ${hasErr ? '#FF6B6B' : '#EDE8FF'}`,
+    background: '#FAFAFA',
+    borderRadius: '10px',
+    padding: '10px 12px 10px 36px',
+    width: '100%',
+    fontSize: '0.875rem',
+    outline: 'none',
+    color: '#1C1C2E',
+  } as React.CSSProperties);
+
+  const onFocus  = (e: React.FocusEvent<HTMLInputElement|HTMLSelectElement>) => {
+    e.currentTarget.style.borderColor = '#7C6FF7';
+    e.currentTarget.style.boxShadow   = '0 0 0 3px rgba(124,111,247,.12)';
+  };
+  const onBlur = (hasErr: boolean) => (e: React.FocusEvent<HTMLInputElement|HTMLSelectElement>) => {
+    e.currentTarget.style.borderColor = hasErr ? '#FF6B6B' : '#EDE8FF';
+    e.currentTarget.style.boxShadow   = 'none';
+  };
+
+  const onSubmit = async (data: CreateUserForm) => {
+    try {
+      await api.post('/admin/users', {
+        username: data.username,
+        email:    data.email,
+        password: data.password,
+        role:     data.role,
+        isActive: data.isActive,
+      });
+      onCreated();
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })
+        ?.response?.data?.message ?? 'Erreur lors de la création';
+      setError('root', { message: msg });
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center"
+         style={{ background: 'rgba(28,28,46,.55)', backdropFilter: 'blur(4px)' }}
+         onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 relative"
+           style={{ border: '1px solid #EDE8FF' }}>
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid #EDE8FF' }}>
+          <h2 className="font-bold text-navy text-base">Ajouter un utilisateur</h2>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg transition-all"
+                  style={{ color: '#6B6B8A' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = '#F8F6FF')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit(onSubmit)} className="px-6 py-5 space-y-4">
+          {errors.root && (
+            <div className="rounded-xl p-3 text-sm text-center"
+                 style={{ background: '#FFF0F0', color: '#FF6B6B', border: '1px solid #FFD0D0' }}>
+              {errors.root.message}
+            </div>
+          )}
+
+          {/* Username */}
+          <div>
+            <label className="block text-xs font-semibold text-navy mb-1.5">Nom d'utilisateur</label>
+            <div className="relative">
+              <UserIcon size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2" style={{ color: '#6B6B8A' }} />
+              <input {...register('username')} placeholder="alice"
+                     style={inputStyle(!!errors.username)} onFocus={onFocus} onBlur={onBlur(!!errors.username)} />
+            </div>
+            {errors.username && <p className="text-xs mt-1" style={{ color: '#FF6B6B' }}>{errors.username.message}</p>}
+          </div>
+
+          {/* Email */}
+          <div>
+            <label className="block text-xs font-semibold text-navy mb-1.5">Adresse email</label>
+            <div className="relative">
+              <Mail size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2" style={{ color: '#6B6B8A' }} />
+              <input {...register('email')} type="email" placeholder="alice@exemple.com"
+                     style={inputStyle(!!errors.email)} onFocus={onFocus} onBlur={onBlur(!!errors.email)} />
+            </div>
+            {errors.email && <p className="text-xs mt-1" style={{ color: '#FF6B6B' }}>{errors.email.message}</p>}
+          </div>
+
+          {/* Password */}
+          <div>
+            <label className="block text-xs font-semibold text-navy mb-1.5">Mot de passe</label>
+            <div className="relative">
+              <Lock size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2" style={{ color: '#6B6B8A' }} />
+              <input {...register('password')} type="password" placeholder="Min. 8 caractères"
+                     style={inputStyle(!!errors.password)} onFocus={onFocus} onBlur={onBlur(!!errors.password)} />
+            </div>
+            {errors.password && <p className="text-xs mt-1" style={{ color: '#FF6B6B' }}>{errors.password.message}</p>}
+          </div>
+
+          {/* Confirm */}
+          <div>
+            <label className="block text-xs font-semibold text-navy mb-1.5">Confirmer le mot de passe</label>
+            <div className="relative">
+              <Lock size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2" style={{ color: '#6B6B8A' }} />
+              <input {...register('confirm')} type="password" placeholder="••••••••"
+                     style={inputStyle(!!errors.confirm)} onFocus={onFocus} onBlur={onBlur(!!errors.confirm)} />
+            </div>
+            {errors.confirm && <p className="text-xs mt-1" style={{ color: '#FF6B6B' }}>{errors.confirm.message}</p>}
+          </div>
+
+          {/* Role + isActive */}
+          <div className="flex gap-4 items-end">
+            <div className="flex-1">
+              <label className="block text-xs font-semibold text-navy mb-1.5">Rôle</label>
+              <select {...register('role')}
+                      className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
+                      style={{ border: '1.5px solid #EDE8FF', background: '#FAFAFA', color: '#1C1C2E' }}
+                      onFocus={onFocus} onBlur={onBlur(false)}>
+                <option value="USER">USER</option>
+                <option value="ADMIN">ADMIN</option>
+              </select>
+            </div>
+            <div className="flex items-center gap-2 pb-2.5">
+              <input {...register('isActive')} type="checkbox" id="isActive" className="accent-violet w-4 h-4" />
+              <label htmlFor="isActive" className="text-xs font-semibold text-navy cursor-pointer">Compte actif</label>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-3 pt-1">
+            <button type="button" onClick={onClose}
+                    className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all"
+                    style={{ border: '1.5px solid #EDE8FF', color: '#6B6B8A', background: '#FAFAFA' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = '#F0EEFF')}
+                    onMouseLeave={e => (e.currentTarget.style.background = '#FAFAFA')}>
+              Annuler
+            </button>
+            <button type="submit" disabled={isSubmitting}
+                    className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50"
+                    style={{ background: '#FF6B6B' }}>
+              {isSubmitting ? 'Création…' : 'Créer l\'utilisateur'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
 
 /* ── KPI Card ─────────────────────────────────────────────────────── */
 function KpiCard({ title, value, icon: Icon, topColor, iconBg, iconColor }: {
@@ -38,9 +209,14 @@ export default function AdminPage() {
   const location     = useLocation();
   const queryClient  = useQueryClient();
   const [toast, setToast]         = useState<{ msg: string; type: 'success'|'error' } | null>(null);
+  const [showAddUser, setShowAddUser] = useState(false);
   const [modSearch, setModSearch]  = useState('');
   const [modCat, setModCat]        = useState<'ALL' | ModuleCategory>('ALL');
   const [modPage, setModPage]      = useState(1);
+  const [modView, setModView]      = useState<'list' | 'grid'>(() =>
+    (localStorage.getItem('admin-mod-view') as 'list' | 'grid') || 'list'
+  );
+  const switchView = (v: 'list' | 'grid') => { setModView(v); localStorage.setItem('admin-mod-view', v); };
 
   if (me && me.role !== 'ADMIN') { navigate('/dashboard'); return null; }
 
@@ -95,16 +271,43 @@ export default function AdminPage() {
   return (
     <Layout>
       {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
+      {showAddUser && (
+        <CreateUserModal
+          onClose={() => setShowAddUser(false)}
+          onCreated={() => {
+            setShowAddUser(false);
+            queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+            setToast({ msg: 'Utilisateur créé avec succès', type: 'success' });
+          }}
+        />
+      )}
       <TopBar title={`Administration — ${tabLabel}`} subtitle="Gestion de la plateforme" />
 
       <div className="px-8 py-6">
 
         {/* ── Utilisateurs ─────────────────────────────────────────── */}
         {tab === 'users' && (
+          <div className="space-y-4">
+            {/* Toolbar */}
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold" style={{ color: '#6B6B8A' }}>
+                {users.length} utilisateur{users.length !== 1 ? 's' : ''}
+              </p>
+              <button
+                onClick={() => setShowAddUser(true)}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all"
+                style={{ background: '#FF6B6B' }}
+                onMouseEnter={e => (e.currentTarget.style.opacity = '0.88')}
+                onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+              >
+                <Plus size={15} />
+                Ajouter un utilisateur
+              </button>
+            </div>
           <div className="bg-white rounded-2xl overflow-hidden" style={{ border: '1px solid #EDE8FF' }}>
             <div className="px-6 py-3.5 text-xs font-semibold uppercase tracking-wider"
                  style={{ borderBottom: '1px solid #EDE8FF', background: '#FAFAFA', color: '#6B6B8A' }}>
-              {users.length} utilisateur{users.length > 1 ? 's' : ''}
+              Liste des comptes
             </div>
             {users.map((u, i) => (
               <div key={u.id}
@@ -139,6 +342,7 @@ export default function AdminPage() {
                 </label>
               </div>
             ))}
+          </div>
           </div>
         )}
 
@@ -202,52 +406,142 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              {/* Counter */}
-              <p className="text-xs font-semibold" style={{ color: '#6B6B8A' }}>
-                {filtered.length} module{filtered.length !== 1 ? 's' : ''}{modSearch || modCat !== 'ALL' ? ' trouvés' : ''}
-              </p>
-
-              {/* Module list */}
-              <div className="space-y-3">
-                {paged.length === 0 ? (
-                  <div className="bg-white rounded-xl px-5 py-8 text-center text-sm"
-                       style={{ border: '1px solid #EDE8FF', color: '#6B6B8A' }}>
-                    Aucun module trouvé
-                  </div>
-                ) : paged.map(mod => (
-                  <div key={mod.id} className="bg-white rounded-xl px-5 py-4 flex items-center gap-4"
-                       style={{ border: '1px solid #EDE8FF' }}>
-                    <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                         style={{ background: mod.isActive ? '#F0EEFF' : '#F8F8F8' }}>
-                      <Shield size={16} style={{ color: mod.isActive ? '#7C6FF7' : '#6B6B8A' }} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <p className="font-semibold text-navy text-sm">{mod.name}</p>
-                        {mod.category && (
-                          <span className="text-xs font-semibold px-1.5 py-0.5 rounded-md"
-                                style={{ background: CAT_BG[mod.category] ?? '#F0EEFF', color: CAT_TABS.find(t => t.key === mod.category)?.color ?? '#7C6FF7' }}>
-                            {mod.category}
-                          </span>
-                        )}
+              {/* Counter + view toggle */}
+              {(() => {
+                const CAT_ICON: Record<string, React.ReactNode> = {
+                  SECURITY: <Shield size={18} />,
+                  NETWORK:  <Wifi   size={18} />,
+                  OSINT:    <Globe  size={18} />,
+                  SCRAPING: <Search size={18} />,
+                };
+                return (
+                  <>
+                    <div className="flex items-center justify-between">
+                      {/* View toggle */}
+                      <div className="flex rounded-lg overflow-hidden" style={{ border: '1.5px solid #EDE8FF' }}>
+                        {(['list', 'grid'] as const).map((v, i) => (
+                          <button key={v} onClick={() => switchView(v)}
+                                  className="flex items-center justify-center w-8 h-8 transition-all"
+                                  style={{
+                                    background: modView === v ? '#7C6FF7' : 'transparent',
+                                    borderRight: i === 0 ? '1px solid #EDE8FF' : 'none',
+                                  }}>
+                            {v === 'list'
+                              ? <LayoutList  size={14} style={{ color: modView === v ? '#fff' : '#6B6B8A' }} />
+                              : <LayoutGrid  size={14} style={{ color: modView === v ? '#fff' : '#6B6B8A' }} />}
+                          </button>
+                        ))}
                       </div>
-                      <p className="text-xs" style={{ color: '#6B6B8A' }}>{mod.description}</p>
+                      {/* Counter */}
+                      <p className="text-xs font-semibold" style={{ color: '#6B6B8A' }}>
+                        {filtered.length} module{filtered.length !== 1 ? 's' : ''}{modSearch || modCat !== 'ALL' ? ' trouvés' : ''}
+                      </p>
                     </div>
-                    <label className="flex items-center gap-1.5 text-xs cursor-pointer" style={{ color: '#6B6B8A' }}>
-                      <input type="checkbox" checked={mod.isActive}
-                             onChange={e => updateModule({ id: mod.id, data: { isActive: e.target.checked } })}
-                             className="accent-violet" />
-                      Actif
-                    </label>
-                    <label className="flex items-center gap-1.5 text-xs cursor-pointer" style={{ color: '#6B6B8A' }}>
-                      <input type="checkbox" checked={mod.defaultEnabled}
-                             onChange={e => updateModule({ id: mod.id, data: { defaultEnabled: e.target.checked } })}
-                             className="accent-violet" />
-                      Par défaut
-                    </label>
-                  </div>
-                ))}
-              </div>
+
+                    {/* Module list view */}
+                    {modView === 'list' && (
+                      <div className="space-y-3">
+                        {paged.length === 0 ? (
+                          <div className="bg-white rounded-xl px-5 py-8 text-center text-sm"
+                               style={{ border: '1px solid #EDE8FF', color: '#6B6B8A' }}>
+                            Aucun module trouvé
+                          </div>
+                        ) : paged.map(mod => (
+                          <div key={mod.id} className="bg-white rounded-xl px-5 py-4 flex items-center gap-4 transition-all"
+                               style={{ border: '1px solid #EDE8FF' }}
+                               onMouseEnter={e => { e.currentTarget.style.borderColor = '#7C6FF7'; e.currentTarget.style.boxShadow = '0 2px 12px rgba(124,111,247,.1)'; }}
+                               onMouseLeave={e => { e.currentTarget.style.borderColor = '#EDE8FF'; e.currentTarget.style.boxShadow = 'none'; }}>
+                            <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                                 style={{ background: mod.isActive ? '#F0EEFF' : '#F8F8F8' }}>
+                              <Shield size={16} style={{ color: mod.isActive ? '#7C6FF7' : '#6B6B8A' }} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-0.5">
+                                <p className="font-semibold text-navy text-sm">{mod.name}</p>
+                                {mod.category && (
+                                  <span className="text-xs font-semibold px-1.5 py-0.5 rounded-md"
+                                        style={{ background: CAT_BG[mod.category] ?? '#F0EEFF', color: CAT_TABS.find(t => t.key === mod.category)?.color ?? '#7C6FF7' }}>
+                                    {mod.category}
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-xs" style={{ color: '#6B6B8A' }}>{mod.description}</p>
+                            </div>
+                            <label className="flex items-center gap-1.5 text-xs cursor-pointer" style={{ color: '#6B6B8A' }}>
+                              <input type="checkbox" checked={mod.isActive}
+                                     onChange={e => updateModule({ id: mod.id, data: { isActive: e.target.checked } })}
+                                     className="accent-violet" />
+                              Actif
+                            </label>
+                            <label className="flex items-center gap-1.5 text-xs cursor-pointer" style={{ color: '#6B6B8A' }}>
+                              <input type="checkbox" checked={mod.defaultEnabled}
+                                     onChange={e => updateModule({ id: mod.id, data: { defaultEnabled: e.target.checked } })}
+                                     className="accent-violet" />
+                              Par défaut
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Module grid view */}
+                    {modView === 'grid' && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {paged.length === 0 ? (
+                          <div className="col-span-3 bg-white rounded-xl px-5 py-8 text-center text-sm"
+                               style={{ border: '1px solid #EDE8FF', color: '#6B6B8A' }}>
+                            Aucun module trouvé
+                          </div>
+                        ) : paged.map(mod => {
+                          const catColor = CAT_TABS.find(t => t.key === mod.category)?.color ?? '#7C6FF7';
+                          return (
+                            <div key={mod.id}
+                                 className="bg-white rounded-xl p-5 flex flex-col gap-3 transition-all cursor-default"
+                                 style={{ border: '1px solid #EDE8FF' }}
+                                 onMouseEnter={e => { e.currentTarget.style.borderColor = '#7C6FF7'; e.currentTarget.style.boxShadow = '0 4px 16px rgba(124,111,247,.13)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                                 onMouseLeave={e => { e.currentTarget.style.borderColor = '#EDE8FF'; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'none'; }}>
+                              {/* Icon + badges row */}
+                              <div className="flex items-center gap-2">
+                                <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                                     style={{ background: mod.isActive ? CAT_BG[mod.category] ?? '#F0EEFF' : '#F8F8F8', color: mod.isActive ? catColor : '#6B6B8A' }}>
+                                  {CAT_ICON[mod.category] ?? <Shield size={18} />}
+                                </div>
+                                {mod.category && (
+                                  <span className="text-xs font-semibold px-1.5 py-0.5 rounded-md"
+                                        style={{ background: CAT_BG[mod.category] ?? '#F0EEFF', color: catColor }}>
+                                    {mod.category}
+                                  </span>
+                                )}
+                              </div>
+                              {/* Name */}
+                              <p className="font-bold text-navy text-sm leading-snug">{mod.name}</p>
+                              {/* Description — 2 lines max */}
+                              <p className="text-xs flex-1 line-clamp-2" style={{ color: '#6B6B8A', lineHeight: 1.6 }}>
+                                {mod.description}
+                              </p>
+                              {/* Toggles */}
+                              <div className="flex items-center gap-4 pt-1" style={{ borderTop: '1px solid #F8F6FF' }}>
+                                <label className="flex items-center gap-1.5 text-xs cursor-pointer" style={{ color: '#6B6B8A' }}>
+                                  <input type="checkbox" checked={mod.isActive}
+                                         onChange={e => updateModule({ id: mod.id, data: { isActive: e.target.checked } })}
+                                         className="accent-violet" />
+                                  Actif
+                                </label>
+                                <label className="flex items-center gap-1.5 text-xs cursor-pointer" style={{ color: '#6B6B8A' }}>
+                                  <input type="checkbox" checked={mod.defaultEnabled}
+                                         onChange={e => updateModule({ id: mod.id, data: { defaultEnabled: e.target.checked } })}
+                                         className="accent-violet" />
+                                  Par défaut
+                                </label>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
 
               {/* Pagination */}
               {totalPages > 1 && (

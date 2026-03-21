@@ -1,4 +1,4 @@
-import { User, ScanModule } from '@prisma/client';
+import { User, ScanModule, Role } from '@prisma/client';
 import { prisma } from '@/utils/prisma';
 import { UpdateUserDTO, UpdateModuleDTO } from '@/domain/types';
 
@@ -6,6 +6,12 @@ export class AdminRepository {
   async findAllUsers(): Promise<Omit<User, 'passwordHash'>[]> {
     const users = await prisma.user.findMany({ orderBy: { createdAt: 'desc' } });
     return users.map(({ passwordHash: _, ...u }) => u);
+  }
+
+  async createUser(data: { username: string; email: string; passwordHash: string; role: Role; isActive: boolean }): Promise<Omit<User, 'passwordHash'>> {
+    const user = await prisma.user.create({ data });
+    const { passwordHash: _, ...safe } = user;
+    return safe;
   }
 
   async updateUser(id: string, data: UpdateUserDTO): Promise<Omit<User, 'passwordHash'>> {

@@ -5,6 +5,14 @@ import { sendSuccess }  from '@/utils/response';
 
 const adminService = new AdminService();
 
+export const createUserSchema = z.object({
+  username: z.string().min(3).max(30),
+  email:    z.string().email(),
+  password: z.string().min(8),
+  role:     z.enum(['USER', 'ADMIN']).default('USER'),
+  isActive: z.boolean().default(true),
+});
+
 export const updateUserSchema = z.object({
   role:     z.enum(['USER', 'ADMIN']).optional(),
   isActive: z.boolean().optional(),
@@ -14,6 +22,13 @@ export const updateModuleSchema = z.object({
   isActive:       z.boolean().optional(),
   defaultEnabled: z.boolean().optional(),
 });
+
+export async function createUser(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const user = await adminService.createUser(req.body);
+    sendSuccess(res, user, 201);
+  } catch (err) { next(err); }
+}
 
 export async function listUsers(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
