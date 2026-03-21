@@ -3,7 +3,7 @@ import { authMiddleware }  from '@/middlewares/auth.middleware';
 import { validate }        from '@/middlewares/validate.middleware';
 import { scanLimiter }     from '@/middlewares/rate-limit';
 import {
-  createScan, listScans, getScan, deleteScan, createScanSchema,
+  createScan, listScans, getScan, deleteScan, getScanLive, createScanSchema,
 } from '@/controllers/scan.controller';
 import { listVulnerabilities, getStats } from '@/controllers/vuln.controller';
 import { generateReport, exportJSON, exportCSV } from '@/controllers/report.controller';
@@ -15,6 +15,7 @@ router.use(authMiddleware);
 router.post  ('/',                    scanLimiter, validate(createScanSchema), createScan);
 router.get   ('/',                    listScans);
 router.get   ('/:id',                 getScan);
+router.get   ('/:id/live',            getScanLive);
 router.delete('/:id',                 deleteScan);
 router.get   ('/:id/vulnerabilities', listVulnerabilities);
 router.get   ('/:id/stats',           getStats);

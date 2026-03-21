@@ -2,6 +2,8 @@ import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { ScanService } from '@/services/scan.service';
 import { sendSuccess }  from '@/utils/response';
+import { prisma }       from '@/utils/prisma';
+import { AppError }     from '@/utils/errors';
 
 const scanService = new ScanService();
 
@@ -50,5 +52,70 @@ export async function deleteScan(req: Request, res: Response, next: NextFunction
   try {
     await scanService.deleteScan(req.params.id, req.user!.userId);
     sendSuccess(res, { message: 'Scan supprimé' });
+  } catch (err) { next(err); }
+}
+
+export async function getScanLive(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const userId = req.user!.userId;
+    const { id } = req.params;
+
+    const [scan, vulns] = await Promise.all([
+      prisma.scan.findUnique({
+        where:   { id },
+        include: {
+          moduleResults: {
+            include:  { module: true },
+            orderBy:  { createdAt: 'asc' },
+          },
+        },
+      }),
+      prisma.vulnerability.findMany({
+        where:   { scanId: id },
+        select:  { id: true, name: true, severity: true, cvssScore: true, endpoint: true, createdAt: true },
+        orderBy: { createdAt: 'asc' },
+      }),
+    ]);
+
+    if (!scan) throw new AppError('Scan introuvable', 404);
+    if (scan.userId !== userId) throw new AppError('Accès refusé', 403);
+
+    const total     = scan.moduleResults.length;
+    const completed = scan.moduleResults.filter(r => r.status === 'DONE').length;
+    const errors    = scan.moduleResults.filter(r => r.status === 'ERROR').length;
+    const running   = scan.moduleResults.filter(r => r.status === 'RUNNING').length;
+    const pending   = scan.moduleResults.filter(r => r.status === 'PENDING').length;
+
+    const sevCounts = { critical: 0, high: 0, medium: 0, low: 0 };
+    for (const v of vulns) {
+      if (v.severity === 'CRITICAL')     sevCounts.critical++;
+      else if (v.severity === 'HIGH')   sevCounts.high++;
+      else if (v.severity === 'MEDIUM') sevCounts.medium++;
+      else if (v.severity === 'LOW')    sevCounts.low++;
+    }
+
+    sendSuccess(res, {
+      scan: {
+        id: scan.id, status: scan.status, targetUrl: scan.targetUrl,
+        depth: scan.depth, threads: scan.threads,
+        startedAt: scan.startedAt, completedAt: scan.completedAt, createdAt: scan.createdAt,
+      },
+      moduleResults: scan.moduleResults.map(r => ({
+        id:                r.id,
+        moduleId:          r.moduleId,
+        moduleName:        r.module.name,
+        moduleSlug:        r.module.slug,
+        moduleDescription: r.module.description,
+        moduleCategory:    r.module.category,
+        status:            r.status,
+        executionTime:     r.executionTime,
+      })),
+      vulnerabilities: vulns,
+      stats: {
+        total, completed, errors, running, pending,
+        progressPercent: total > 0 ? Math.round(((completed + errors) / total) * 100) : 0,
+        vulnerabilitiesFound: sevCounts,
+      },
+    });
   } catch (err) { next(err); }
 }
