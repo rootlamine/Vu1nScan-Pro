@@ -280,6 +280,35 @@ async function main() {
   }
   console.log(`✅ Profils de scan créés pour admin et demo (${profilesData.length} profils)`);
 
+  // ── 5. Permissions utilisateurs ──────────────────────────────────────────────
+
+  const adminPerms = {
+    maxScansPerDay: 9999, maxScansPerMonth: 9999, maxConcurrentScans: 10,
+    maxTargetsPerScan: 10, maxThreads: 20, maxScanDuration: 3600, maxScanDepth: 'deep',
+    allowedCategories: [] as string[], blockedModules: [] as string[],
+    canUseOffensiveModules: true, canGenerateReports: true, canExportData: true,
+    canCreateProfiles: true, canScanInternalIPs: true, canUseDeepScan: true, canScheduleScans: true,
+  };
+  const userPerms = {
+    maxScansPerDay: 10, maxScansPerMonth: 100, maxConcurrentScans: 2,
+    maxTargetsPerScan: 1, maxThreads: 5, maxScanDuration: 300, maxScanDepth: 'normal',
+    allowedCategories: [] as string[], blockedModules: [] as string[],
+    canUseOffensiveModules: false, canGenerateReports: true, canExportData: true,
+    canCreateProfiles: true, canScanInternalIPs: false, canUseDeepScan: false, canScheduleScans: false,
+  };
+
+  await prisma.userPermissions.upsert({
+    where:  { userId: admin.id },
+    update: adminPerms,
+    create: { userId: admin.id, ...adminPerms },
+  });
+  await prisma.userPermissions.upsert({
+    where:  { userId: demoUser.id },
+    update: userPerms,
+    create: { userId: demoUser.id, ...userPerms },
+  });
+  console.log(`✅ Permissions créées : admin (illimitées), demo (limites standard)`);
+
   console.log('\n✅ Seed terminé avec succès !');
   console.log('──────────────────────────────────────────');
   console.log('  ADMIN : admin@vulnscan.io / Admin@2026');

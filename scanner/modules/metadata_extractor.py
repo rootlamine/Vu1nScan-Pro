@@ -98,12 +98,16 @@ class MetadataExtractor(BaseModule):
                             name="Métadonnées sensibles dans document",
                             severity="MEDIUM",
                             cvss_score=4.5,
+                            cvss_vector="AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+                            cwe_id="CWE-312",
                             endpoint=file_url,
                             description=(
                                 f"Le document exposé contient des métadonnées révélant des informations internes : "
                                 f"{leaked or ', '.join(list(meta.keys())[:5])}. "
                                 "Ces données peuvent révéler des noms d'employés, logiciels internes, chemins réseau."
                             ),
+                            impact="Fuite de noms d'employés, outils internes, chemins réseau, structure organisationnelle.",
+                            evidence=f"Métadonnées extraites : {leaked or ', '.join(list(meta.keys())[:5])}.",
                             recommendation=(
                                 "Nettoyez les métadonnées avant publication (File > Properties > Remove Personal Info). "
                                 "Utilisez des outils comme ExifTool ou mat2 pour anonymiser les documents."
@@ -126,11 +130,15 @@ class MetadataExtractor(BaseModule):
                             name="Données EXIF exposées dans image",
                             severity="MEDIUM" if gps_keys else "LOW",
                             cvss_score=4.5 if gps_keys else 3.1,
+                            cvss_vector="AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+                            cwe_id="CWE-312",
                             endpoint=img_url,
                             description=(
                                 f"L'image contient des données EXIF : {leaked}. "
                                 + ("Les coordonnées GPS révèlent la localisation physique." if gps_keys else "")
                             ),
+                            impact="Fuite de localisation GPS, modèle d'appareil, horodatage, informations personnelles.",
+                            evidence=f"Données EXIF extraites : {leaked}.",
                             recommendation=(
                                 "Supprimez les métadonnées EXIF avant de publier des images. "
                                 "Utilisez ImageMagick (mogrify -strip) ou PIL pour nettoyer les EXIF."

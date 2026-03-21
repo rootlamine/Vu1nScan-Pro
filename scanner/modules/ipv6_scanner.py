@@ -68,6 +68,8 @@ class Module(BaseModule):
                 name=f"Hôte accessible en IPv6 : {ipv6_addr}",
                 severity="MEDIUM",
                 cvss_score=4.5,
+                cvss_vector="AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+                cwe_id="CWE-284",
                 endpoint=f"[{ipv6_addr}]",
                 description=(
                     f"La cible '{host}' est accessible en IPv6 via l'adresse '{ipv6_addr}'. "
@@ -75,6 +77,8 @@ class Module(BaseModule):
                     "des services qui devraient être protégés peuvent être accessibles "
                     "en contournant les règles IPv4."
                 ),
+                impact="Contournement potentiel des règles de pare-feu IPv4 via l'interface IPv6.",
+                evidence=f"Enregistrement AAAA résolu : {host} → {ipv6_addr}.",
                 recommendation=(
                     "Appliquer les mêmes règles de filtrage en IPv6 qu'en IPv4. "
                     "Désactiver IPv6 si non utilisé. "
@@ -103,11 +107,15 @@ class Module(BaseModule):
                             name=f"Port {port}/{service} ouvert en IPv6",
                             severity=severity,
                             cvss_score=cvss,
+                            cvss_vector="AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N" if is_sensitive else "AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+                            cwe_id="CWE-284",
                             endpoint=f"[{ipv6_addr}]:{port}",
                             description=(
                                 f"Le port {port}/tcp ({service}) est ouvert sur l'adresse IPv6 '{ipv6_addr}'. "
                                 f"{'Ce service sensible peut être exposé si les règles IPv6 ne sont pas configurées.' if is_sensitive else 'Ce port est accessible via IPv6.'}"
                             ),
+                            impact="Service potentiellement non protégé via IPv6, contournement des règles IPv4.",
+                            evidence=f"Connexion TCP réussie sur [{ipv6_addr}]:{port} ({service}).",
                             recommendation=(
                                 f"Vérifier que les règles de pare-feu IPv6 bloquent le port {port} si non nécessaire. "
                                 "Implémenter ip6tables ou équivalent avec les mêmes règles qu'IPv4."

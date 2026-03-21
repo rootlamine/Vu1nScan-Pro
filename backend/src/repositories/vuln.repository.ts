@@ -75,14 +75,31 @@ export class VulnRepository implements IVulnRepository {
         name:           v.name,
         severity:       v.severity as Severity,
         cvssScore:      v.cvss_score,
+        cvssVector:     v.cvss_vector,
         cveId:          v.cve_id,
+        cweId:          v.cwe_id,
         endpoint:       v.endpoint,
         parameter:      v.parameter,
         description:    v.description,
         payload:        v.payload,
+        evidence:       v.evidence,
+        impact:         v.impact,
         recommendation: v.recommendation,
         references:     v.references ?? [],
       })),
     });
+  }
+
+  async findById(id: string): Promise<Vulnerability | null> {
+    return prisma.vulnerability.findUnique({ where: { id } });
+  }
+
+  async update(id: string, data: {
+    isResolved?: boolean;
+    isFalsePositive?: boolean;
+    notes?: string;
+    resolvedAt?: Date | null;
+  }): Promise<Vulnerability> {
+    return prisma.vulnerability.update({ where: { id }, data });
   }
 }

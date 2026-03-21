@@ -154,12 +154,16 @@ class Module(BaseModule):
                             name="Aucun WAF/IPS détecté — payloads malicieux non bloqués",
                             severity="MEDIUM",
                             cvss_score=4.0,
+                            cvss_vector="AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:N",
+                            cwe_id="CWE-693",
                             endpoint=url,
                             description=(
                                 "Aucun WAF ni système de prévention d'intrusion n'a été détecté. "
                                 "Des payloads malicieux (SQLi, XSS) ont été envoyés sans déclencher "
                                 "de blocage. L'application est exposée sans protection périmétrique."
                             ),
+                            impact="Exploitation directe des vulnérabilités applicatives sans blocage périmétrique.",
+                            evidence="Payload SQLi+XSS envoyé sans déclencher HTTP 403/429/503.",
                             recommendation=(
                                 "Déployer un Web Application Firewall (WAF) en frontal. "
                                 "Solutions cloud : Cloudflare, AWS WAF, Imperva. "
@@ -177,12 +181,16 @@ class Module(BaseModule):
                     name=f"WAF/Firewall détecté : {waf_list}",
                     severity="MEDIUM",
                     cvss_score=4.0,
+                    cvss_vector="AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+                    cwe_id="CWE-200",
                     endpoint=url,
                     description=(
                         f"Un ou plusieurs WAF/firewalls ont été identifiés : {waf_list}. "
                         "La présence d'un WAF est une information de reconnaissance importante. "
                         "Les WAF peuvent être contournés avec des techniques d'obfuscation avancées."
                     ),
+                    impact="Information de reconnaissance, possibilité de contournement WAF ciblé.",
+                    evidence=f"Signatures WAF détectées via en-têtes/cookies/corps de réponse : {waf_list}.",
                     recommendation=(
                         "Les WAF ne remplacent pas un code sécurisé. "
                         "Combiner WAF avec des pratiques de développement sécurisé. "

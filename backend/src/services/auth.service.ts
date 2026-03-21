@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { User } from '@prisma/client';
 import { UserRepository } from '@/repositories/user.repository';
+import { PermissionService } from '@/services/permission.service';
 import { AppError } from '@/utils/errors';
 import { config } from '@/utils/config';
 import {
@@ -9,7 +10,8 @@ import {
   ChangePasswordDTO, JwtPayload,
 } from '@/domain/types';
 
-const userRepo = new UserRepository();
+const userRepo    = new UserRepository();
+const permService = new PermissionService();
 
 type SafeUser = Omit<User, 'passwordHash'>;
 
@@ -29,6 +31,7 @@ export class AuthService {
 
     const passwordHash = await bcrypt.hash(dto.password, 10);
     const user = await userRepo.create({ username: dto.username, email: dto.email, passwordHash });
+    await permService.createDefaultPermissions(user.id, user.role);
     return { token: this.signToken(user), user: stripHash(user) };
   }
 

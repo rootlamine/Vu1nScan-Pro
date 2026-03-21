@@ -98,12 +98,16 @@ class Module(BaseModule):
                             name=f"Rate limiting insuffisant : bloqué après {blocked_at} tentatives",
                             severity="MEDIUM",
                             cvss_score=5.3,
+                            cvss_vector="AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+                            cwe_id="CWE-307",
                             endpoint=target,
                             description=(
                                 f"L'endpoint '{endpoint}' implémente un rate limiting mais "
                                 f"seulement après {blocked_at} tentatives ({num_requests} testées). "
                                 "Un attaquant peut effectuer de nombreuses tentatives avant d'être bloqué."
                             ),
+                            impact="Attaque brute force possible sur les identifiants, credential stuffing.",
+                            evidence=f"Endpoint '{endpoint}' bloque uniquement après {blocked_at} tentatives.",
                             recommendation=(
                                 "Réduire le seuil de blocage à 5-10 tentatives par IP. "
                                 "Implémenter un délai exponentiel. "
@@ -121,6 +125,8 @@ class Module(BaseModule):
                             name="Absence de rate limiting sur l'endpoint d'authentification",
                             severity="MEDIUM",
                             cvss_score=5.3,
+                            cvss_vector="AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+                            cwe_id="CWE-307",
                             endpoint=target,
                             description=(
                                 f"{num_requests} requêtes envoyées sur '{endpoint}' en "
@@ -128,6 +134,8 @@ class Module(BaseModule):
                                 "L'absence de rate limiting permet les attaques par force brute "
                                 "et credential stuffing sur l'authentification."
                             ),
+                            impact="Brute force illimité sur les credentials, credential stuffing, déni de service applicatif.",
+                            evidence=f"{num_requests} requêtes POST sur '{endpoint}' en {flood_duration:.1f}s, aucun HTTP 429 reçu.",
                             recommendation=(
                                 "Implémenter un rate limiting sur les endpoints d'authentification "
                                 "(ex: 5 tentatives par IP par 15 minutes). "

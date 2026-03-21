@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { Layout } from '@/components/ui/Layout';
 import api from '@/services/api';
-import type { ScanModule, ModuleCategory, ScanProfile } from '@/types';
+import type { ScanModule, ModuleCategory, ScanProfile, MyLimitsResp } from '@/types';
 
 /* ── URL / IP validation ──────────────────────────────────────────── */
 const IP_RE = /^(\d{1,3}\.){3}\d{1,3}(:\d{1,5})?$/;
@@ -162,6 +162,12 @@ export default function NewScanPage() {
     queryFn:  () => api.get('/profiles'),
   });
   const profiles = profilesData?.data?.data ?? [];
+
+  const { data: limitsData } = useQuery<{ data: { data: MyLimitsResp } }>({
+    queryKey: ['my-limits'],
+    queryFn:  () => api.get('/auth/me/limits'),
+  });
+  const limits = limitsData?.data?.data;
 
   /* ── Profile save mutation ───────────────────────────────────────── */
   const saveMutation = useMutation({
@@ -663,9 +669,43 @@ export default function NewScanPage() {
                 <p className="font-bold text-navy text-sm">{estimatedTime}</p>
               </div>
 
+              {/* Limites */}
+              {limits && (
+                <div className="mb-3 rounded-xl p-3" style={{ background: '#F0EEFF' }}>
+                  <p className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: '#6B6B8A' }}>
+                    Mes limites
+                  </p>
+                  <div className="space-y-1.5">
+                    {[
+                      { label: "Aujourd'hui", used: limits.remaining.todayUsed, max: limits.remaining.todayMax },
+                      { label: 'Ce mois',     used: limits.remaining.monthUsed, max: limits.remaining.monthMax },
+                    ].map(({ label, used, max }) => (
+                      <div key={label}>
+                        <div className="flex justify-between text-[10px] mb-0.5">
+                          <span style={{ color: '#6B6B8A' }}>{label}</span>
+                          <span className="font-mono font-bold"
+                                style={{ color: used >= max ? '#FF6B6B' : '#7C6FF7' }}>
+                            {used}/{max}
+                          </span>
+                        </div>
+                        <div className="w-full rounded-full h-1.5" style={{ background: '#EDE8FF' }}>
+                          <div className="h-1.5 rounded-full"
+                               style={{ width: `${Math.min(100, (used / max) * 100)}%`, background: used >= max ? '#FF6B6B' : '#7C6FF7' }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {limits.remaining.todayRemaining === 0 && (
+                    <p className="text-xs mt-2 text-center font-semibold" style={{ color: '#FF6B6B' }}>
+                      Limite journalière atteinte
+                    </p>
+                  )}
+                </div>
+              )}
+
               <button
                 onClick={handleSubmit(onSubmit)}
-                disabled={isSubmitting}
+                disabled={isSubmitting || (limits?.remaining.todayRemaining === 0 && limits?.permissions.maxScansPerDay < 9999)}
                 className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm text-white mb-2 transition-all disabled:opacity-50"
                 style={{ background: '#FF6B6B' }}
               >

@@ -85,12 +85,16 @@ class Module(BaseModule):
                     name="IDOR (Insecure Direct Object Reference) détecté",
                     severity="HIGH",
                     cvss_score=8.8,
+                    cvss_vector="AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:N",
+                    cwe_id="CWE-639",
                     endpoint=f"{base_url}/api/users/{{id}}",
                     description=(
                         f"Les endpoints {paths_str} retournent des données sans vérification "
                         "d'autorisation (accessible sans token). Un attaquant peut énumérer "
                         "les IDs pour accéder aux données de tous les utilisateurs."
                     ),
+                    impact="Accès non autorisé aux données de tous les utilisateurs par énumération d'ID.",
+                    evidence=f"Endpoints {paths_str} retournent HTTP 200 avec données utilisateur sans token d'auth.",
                     recommendation=(
                         "Implémenter un contrôle d'accès basé sur l'identité authentifiée. "
                         "Vérifier que l'utilisateur connecté possède le droit d'accès à la ressource. "
@@ -117,12 +121,16 @@ class Module(BaseModule):
                                 name=f"Accès non authentifié à des données sensibles : {path}",
                                 severity="HIGH",
                                 cvss_score=8.8,
+                                cvss_vector="AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+                                cwe_id="CWE-284",
                                 endpoint=target,
                                 description=(
                                     f"L'endpoint '{path}' expose des données utilisateur sensibles "
                                     "sans authentification requise. "
                                     "N'importe quelle personne peut accéder à ces informations."
                                 ),
+                                impact="Fuite massive de données utilisateur (emails, rôles, tokens) sans authentification.",
+                                evidence=f"HTTP 200 sur '{path}' sans Authorization header, réponse JSON contenant des données sensibles.",
                                 recommendation=(
                                     "Requérir un token JWT valide pour tous les endpoints sensibles. "
                                     "Implémenter un middleware d'authentification sur toutes les routes API. "
@@ -146,6 +154,8 @@ class Module(BaseModule):
                                     name="Token JWT invalide accepté (auth bypassée)",
                                     severity="HIGH",
                                     cvss_score=8.8,
+                                    cvss_vector="AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N",
+                                    cwe_id="CWE-287",
                                     endpoint=target,
                                     payload=f"Authorization: Bearer {token[:30]}…",
                                     description=(
@@ -153,6 +163,8 @@ class Module(BaseModule):
                                         f"('{token[:20]}…') et retourne des données. "
                                         "La validation du token est défaillante."
                                     ),
+                                    impact="Contournement total de l'authentification, accès aux ressources protégées.",
+                                    evidence=f"HTTP 200 retourné sur '{path}' avec token JWT invalide '{token[:20]}…'.",
                                     recommendation=(
                                         "Valider strictement les signatures JWT (algorithme, expiration, issuer). "
                                         "Rejeter les algorithmes 'none'. "

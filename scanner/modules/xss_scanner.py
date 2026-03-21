@@ -66,6 +66,8 @@ class Module(BaseModule):
                                 name           = "Cross-Site Scripting (XSS) réfléchi — paramètre GET",
                                 severity       = "HIGH",
                                 cvss_score     = 7.2,
+                                cvss_vector    = "AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N",
+                                cwe_id         = "CWE-79",
                                 endpoint       = url,
                                 parameter      = param,
                                 description    = (
@@ -74,6 +76,8 @@ class Module(BaseModule):
                                     "de code JavaScript arbitraire dans le navigateur de la victime."
                                 ),
                                 payload        = payload,
+                                impact         = "Vol de cookies de session, redirection malveillante, défacement de page, phishing ciblé.",
+                                evidence       = f"Payload '{payload}' retrouvé tel quel dans la réponse HTTP sans encodage.",
                                 recommendation = (
                                     "Encoder toutes les sorties HTML avec htmlspecialchars() ou équivalent. "
                                     "Valider et filtrer les entrées côté serveur. "
@@ -141,6 +145,8 @@ class Module(BaseModule):
                                             name           = "Cross-Site Scripting (XSS) réfléchi — formulaire",
                                             severity       = "HIGH",
                                             cvss_score     = 7.2,
+                                            cvss_vector    = "AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N",
+                                            cwe_id         = "CWE-79",
                                             endpoint       = form_url,
                                             parameter      = field,
                                             description    = (
@@ -148,6 +154,8 @@ class Module(BaseModule):
                                                 f"réfléchit le payload XSS « {payload} » sans encodage."
                                             ),
                                             payload        = payload,
+                                            impact         = "Vol de cookies de session, redirection malveillante, défacement de page, phishing ciblé.",
+                                            evidence       = f"Payload '{payload}' retrouvé tel quel dans la réponse HTTP sans encodage.",
                                             recommendation = (
                                                 "Encoder toutes les sorties HTML. "
                                                 "Valider les entrées côté serveur. "

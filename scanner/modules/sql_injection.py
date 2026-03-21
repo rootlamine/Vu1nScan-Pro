@@ -88,6 +88,8 @@ class Module(BaseModule):
                                 name           = "Injection SQL détectée",
                                 severity       = "CRITICAL",
                                 cvss_score     = 9.8,
+                                cvss_vector    = "AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+                                cwe_id         = "CWE-89",
                                 endpoint       = url,
                                 parameter      = param,
                                 description    = (
@@ -96,6 +98,8 @@ class Module(BaseModule):
                                     "révélant la technologie de base de données."
                                 ),
                                 payload        = payload,
+                                impact         = "Exfiltration totale de la base de données, contournement d'authentification, élévation de privilèges.",
+                                evidence       = f"Payload: {payload} — Message d'erreur SQL détecté dans la réponse HTTP.",
                                 recommendation = (
                                     "Utiliser des requêtes préparées (prepared statements) "
                                     "avec des paramètres liés. Ne jamais concaténer "

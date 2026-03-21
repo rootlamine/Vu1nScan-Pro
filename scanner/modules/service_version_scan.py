@@ -160,6 +160,8 @@ class Module(BaseModule):
                         name=f"{service_name} {version} — CVEs connus détectés",
                         severity=severity,
                         cvss_score=float(cvss),
+                        cvss_vector="AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H" if cvss >= 9.0 else "AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N",
+                        cwe_id="CWE-1104",
                         endpoint=url,
                         cve_id=cves[0]["id"],
                         description=(
@@ -167,6 +169,8 @@ class Module(BaseModule):
                             f"{len(cves)} CVE(s) connu(s) pour cette version : {cve_list}. "
                             f"CVE le plus sévère : {top_cve['id']} (CVSS {cvss}) — {top_cve['desc'][:150]}"
                         ),
+                        impact=f"Exploitation de CVEs connus pour {service_name} {version} : RCE, fuite de données.",
+                        evidence=f"Version '{service_name} {version}' détectée, CVEs associés : {cve_list}.",
                         recommendation=(
                             f"Mettre à jour {service_name} vers la dernière version stable. "
                             "Masquer les informations de version dans les en-têtes et banners. "
@@ -181,12 +185,16 @@ class Module(BaseModule):
                         name=f"Version de service exposée : {service_name} {version}",
                         severity="HIGH",
                         cvss_score=7.5,
+                        cvss_vector="AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+                        cwe_id="CWE-200",
                         endpoint=url,
                         description=(
                             f"{service_name} version {version} est exposé dans les en-têtes/banners. "
                             "La divulgation de version permet à un attaquant de rechercher "
                             "des exploits spécifiques à cette version."
                         ),
+                        impact="Fingerprinting du service, recherche ciblée d'exploits pour la version exposée.",
+                        evidence=f"Version '{service_name} {version}' exposée dans les en-têtes HTTP ou banners.",
                         recommendation=(
                             f"Masquer la version de {service_name}. "
                             "Maintenir le service à jour. "

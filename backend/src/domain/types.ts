@@ -52,13 +52,23 @@ export interface VulnOutput {
   name: string;
   severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
   cvss_score?: number;
+  cvss_vector?: string;
   cve_id?: string;
+  cwe_id?: string;
   endpoint?: string;
   parameter?: string;
   description: string;
   payload?: string;
+  evidence?: string;
+  impact?: string;
   recommendation: string;
   references?: string[];
+}
+
+export interface UpdateVulnDTO {
+  isResolved?: boolean;
+  isFalsePositive?: boolean;
+  notes?: string;
 }
 
 export interface ModuleOutput {

@@ -55,11 +55,15 @@ class SubdomainEnum(BaseModule):
                     name=f"Sous-domaines exposés ({len(found)} trouvés)",
                     severity="MEDIUM",
                     cvss_score=4.3,
+                    cvss_vector="AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+                    cwe_id="CWE-200",
                     endpoint=domain,
                     description=(
                         f"{len(found)} sous-domaine(s) actif(s) découvert(s), élargissant la surface d'attaque. "
                         f"Trouvés : {details}."
                     ),
+                    impact="Surface d'attaque élargie, environnements dev/staging potentiellement non sécurisés.",
+                    evidence=f"{len(found)} sous-domaines résolus : {details}.",
                     recommendation=(
                         "Supprimez les sous-domaines non utilisés. Mettez en place un inventaire des actifs DNS. "
                         "Protégez les environnements de développement/staging avec une authentification."

@@ -97,6 +97,8 @@ class Module(BaseModule):
                                 name="Injection de commande OS détectée",
                                 severity="CRITICAL",
                                 cvss_score=9.8,
+                                cvss_vector="AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+                                cwe_id="CWE-78",
                                 endpoint=url,
                                 parameter=param,
                                 payload=payload.strip(),
@@ -105,6 +107,8 @@ class Module(BaseModule):
                                     f"Le payload '{payload.strip()}' a provoqué l'exécution d'une commande "
                                     "système dont la sortie est reflétée dans la réponse HTTP."
                                 ),
+                                impact="Exécution de commandes arbitraires, prise de contrôle totale du serveur, pivot réseau.",
+                                evidence=f"Payload: {payload.strip()} — Sortie de commande détectée dans la réponse HTTP.",
                                 recommendation=(
                                     "Ne jamais passer d'entrées utilisateur à des fonctions système "
                                     "(exec, system, popen, shell_exec). "

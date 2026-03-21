@@ -81,6 +81,8 @@ class Module(BaseModule):
                                     name="GraphQL Introspection activée",
                                     severity="MEDIUM",
                                     cvss_score=5.3,
+                                    cvss_vector="AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+                                    cwe_id="CWE-200",
                                     endpoint=target,
                                     payload=INTROSPECTION_QUERY,
                                     description=(
@@ -89,6 +91,8 @@ class Module(BaseModule):
                                         "révélant tous les types, champs, mutations et queries disponibles. "
                                         "Cela facilite grandement la reconnaissance pour un attaquant."
                                     ),
+                                    impact="Exposition complète du schéma API, facilite la découverte de mutations sensibles.",
+                                    evidence=f"Introspection retourne {type_count} types GraphQL sans authentification.",
                                     recommendation=(
                                         "Désactiver l'introspection en production. "
                                         "Apollo Server: introspection: false. "
@@ -112,6 +116,8 @@ class Module(BaseModule):
                                     name="Endpoint GraphQL détecté (introspection désactivée)",
                                     severity="MEDIUM",
                                     cvss_score=5.3,
+                                    cvss_vector="AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+                                    cwe_id="CWE-200",
                                     endpoint=target,
                                     payload=INTROSPECTION_QUERY,
                                     description=(
@@ -120,6 +126,8 @@ class Module(BaseModule):
                                         "est connue et peut être ciblée par des attaques de force brute "
                                         "de champs ou des injections GraphQL."
                                     ),
+                                    impact="Surface d'attaque GraphQL exposée, risque d'injection et d'abus de queries.",
+                                    evidence=f"Endpoint '{path}' répond aux requêtes GraphQL avec des erreurs structurées.",
                                     recommendation=(
                                         "Implémenter un rate limiting sur les requêtes GraphQL. "
                                         "Activer query depth limiting et complexity analysis. "

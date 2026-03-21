@@ -52,12 +52,16 @@ class WhoisLookup(BaseModule):
                         name="Informations WHOIS publiques",
                         severity="LOW",
                         cvss_score=2.0,
+                        cvss_vector="AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+                        cwe_id="CWE-200",
                         endpoint=domain,
                         description=(
                             "Les informations WHOIS du domaine sont accessibles publiquement et peuvent "
                             "faciliter la reconnaissance d'un attaquant. "
                             + " | ".join(info_parts)
                         ),
+                        impact="Reconnaissance facilitée : emails de contact, organisation, registrar, nameservers.",
+                        evidence=" | ".join(info_parts),
                         recommendation=(
                             "Activez la protection WHOIS (privacy protection) auprès de votre registrar "
                             "pour masquer les informations personnelles et organisationnelles."

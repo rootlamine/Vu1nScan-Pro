@@ -83,12 +83,16 @@ class TechnologyFingerprint(BaseModule):
                     name=f"Technologies identifiées ({len(detected)})",
                     severity="LOW",
                     cvss_score=2.5,
+                    cvss_vector="AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+                    cwe_id="CWE-200",
                     endpoint=base,
                     description=(
                         f"Les technologies suivantes ont été détectées sur le site : {', '.join(detected)}. "
                         "Ces informations aident un attaquant à cibler des vulnérabilités connues "
                         "spécifiques à ces technologies."
                     ),
+                    impact="Fingerprinting du stack technique facilitant la recherche d'exploits ciblés.",
+                    evidence=f"Technologies détectées via en-têtes/cookies/HTML : {', '.join(detected)}.",
                     recommendation=(
                         "Masquez les en-têtes révélant les technologies (Server, X-Powered-By). "
                         "Gardez tous les composants à jour. "

@@ -85,12 +85,16 @@ class BrokenLinks(BaseModule):
                     name=f"Erreurs serveur détectées ({len(server_errors)} liens)",
                     severity="MEDIUM",
                     cvss_score=4.0,
+                    cvss_vector="AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+                    cwe_id="CWE-200",
                     endpoint=base,
                     description=(
                         f"{len(server_errors)} lien(s) retournant des erreurs serveur (5xx) détectés. "
                         f"Exemples : {sample}. "
                         "Les erreurs 5xx peuvent révéler des informations sur l'architecture interne."
                     ),
+                    impact="Pages d'erreur révélant des stack traces, chemins internes ou technologies.",
+                    evidence=f"Liens 5xx détectés : {sample}.",
                     recommendation=(
                         "Corrigez ou supprimez les liens cassés. "
                         "Configurez des pages d'erreur personnalisées ne révélant pas d'informations techniques."
@@ -104,12 +108,16 @@ class BrokenLinks(BaseModule):
                     name=f"Liens cassés détectés ({len(client_errors)} liens 404)",
                     severity="LOW",
                     cvss_score=2.5,
+                    cvss_vector="AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:L",
+                    cwe_id="CWE-404",
                     endpoint=base,
                     description=(
                         f"{len(client_errors)} lien(s) cassé(s) (4xx) trouvés lors du crawl. "
                         f"Exemples : {sample}. "
                         "Les liens morts nuisent à l'expérience utilisateur et peuvent indiquer une maintenance insuffisante."
                     ),
+                    impact="Mauvaise expérience utilisateur, ressources obsolètes potentiellement réutilisables.",
+                    evidence=f"Liens 4xx détectés : {sample}.",
                     recommendation=(
                         "Mettez en place une surveillance régulière des liens (ex: Google Search Console). "
                         "Supprimez ou redirigez (301) les URLs obsolètes."

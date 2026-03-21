@@ -68,11 +68,15 @@ class Module(BaseModule):
                     name="Protection CSRF manquante",
                     severity="MEDIUM",
                     cvss_score=6.5,
+                    cvss_vector="AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:H/A:N",
+                    cwe_id="CWE-352",
                     endpoint=url,
                     description=(
                         f"{vulnerable_forms} formulaire(s) POST sans token CSRF détecté(s). "
                         "Un attaquant peut forger des requêtes au nom de l'utilisateur authentifié."
                     ),
+                    impact="Actions non autorisées exécutées au nom de l'utilisateur (changement de mot de passe, transferts, etc.).",
+                    evidence=f"{vulnerable_forms} formulaire(s) POST sans champ CSRF détecté(s) sur la page.",
                     recommendation=(
                         "Implémenter des tokens CSRF synchronisés (Synchronizer Token Pattern). "
                         "Utiliser les attributs SameSite=Strict sur les cookies de session."
@@ -89,9 +93,13 @@ class Module(BaseModule):
                             name="Cookie de session sans attribut SameSite",
                             severity="MEDIUM",
                             cvss_score=5.4,
+                            cvss_vector="AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:H/A:N",
+                            cwe_id="CWE-1275",
                             endpoint=url,
                             parameter=cookie.name,
                             description=f"Le cookie '{cookie.name}' n'a pas l'attribut SameSite, facilitant les attaques CSRF.",
+                            impact="Requêtes cross-site forgées avec les cookies de session de la victime.",
+                            evidence=f"Cookie '{cookie.name}' défini sans attribut SameSite.",
                             recommendation="Ajouter SameSite=Strict ou SameSite=Lax sur tous les cookies de session.",
                             references=CSRF_REFS,
                         ))

@@ -104,11 +104,15 @@ class Module(BaseModule):
                                 name=f"Endpoint API accessible sans authentification : {path}",
                                 severity=severity,
                                 cvss_score=cvss,
+                                cvss_vector="AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N" if is_sensitive else "AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+                                cwe_id="CWE-285",
                                 endpoint=target,
                                 description=(
                                     f"L'endpoint '{path}' répond avec HTTP {code} sans token d'authentification. "
                                     f"{'Il expose des données ou configurations sensibles.' if has_data else 'Cet endpoint administratif est directement accessible.'}"
                                 ),
+                                impact="Accès non autorisé aux données utilisateurs, configuration, secrets applicatifs.",
+                                evidence=f"HTTP {code} retourné sur '{path}' sans en-tête Authorization.",
                                 recommendation=(
                                     "Protéger tous les endpoints API avec une authentification (JWT, OAuth2). "
                                     "Implémenter une autorisation basée sur les rôles (RBAC). "
@@ -124,12 +128,16 @@ class Module(BaseModule):
                                 name=f"Endpoint API sensible détecté (auth requise) : {path}",
                                 severity="MEDIUM",
                                 cvss_score=5.3,
+                                cvss_vector="AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+                                cwe_id="CWE-285",
                                 endpoint=target,
                                 description=(
                                     f"L'endpoint sensible '{path}' existe et retourne HTTP 401. "
                                     "L'authentification est requise mais l'endpoint est exposé, "
                                     "ce qui révèle la surface d'attaque."
                                 ),
+                                impact="Énumération de la surface d'attaque, tentatives de brute-force sur les credentials.",
+                                evidence=f"HTTP 401 retourné sur '{path}' — endpoint sensible confirmé.",
                                 recommendation=(
                                     "Masquer ou renommer les endpoints administratifs. "
                                     "Implémenter une authentification forte. "

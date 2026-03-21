@@ -50,11 +50,15 @@ class DnsRecon(BaseModule):
                     name="Enregistrements DNS exposés",
                     severity="LOW",
                     cvss_score=2.5,
+                    cvss_vector="AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+                    cwe_id="CWE-200",
                     endpoint=domain,
                     description=(
                         f"Les enregistrements DNS du domaine révèlent l'infrastructure réseau : {info}. "
                         "Ces informations peuvent faciliter la cartographie réseau par un attaquant."
                     ),
+                    impact="Cartographie de l'infrastructure, identification des sous-domaines et services internes.",
+                    evidence=f"Enregistrements DNS publics : {info}.",
                     recommendation=(
                         "Limitez les enregistrements DNS aux stricts nécessaires. "
                         "N'exposez pas les adresses IP internes dans les enregistrements publics."
@@ -74,12 +78,16 @@ class DnsRecon(BaseModule):
                             name="Transfert de zone DNS ouvert (AXFR)",
                             severity="CRITICAL",
                             cvss_score=9.1,
+                            cvss_vector="AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+                            cwe_id="CWE-200",
                             endpoint=f"{domain} via {ns_clean}",
                             description=(
                                 f"Le nameserver {ns_clean} autorise les transferts de zone AXFR non authentifiés. "
                                 f"Enregistrements exposés : {', '.join(names)}. "
                                 "Un attaquant peut cartographier toute l'infrastructure interne."
                             ),
+                            impact="Cartographie complète de tous les sous-domaines et IPs internes du domaine.",
+                            evidence=f"Transfert AXFR réussi depuis {ns_clean} : {', '.join(names[:5])}.",
                             recommendation=(
                                 "Désactivez le transfert de zone AXFR ou restreignez-le aux seuls "
                                 "serveurs DNS secondaires autorisés via des ACLs IP."

@@ -64,3 +64,50 @@ export async function getAdminStats(req: Request, res: Response, next: NextFunct
     sendSuccess(res, stats);
   } catch (err) { next(err); }
 }
+
+export const updatePermissionsSchema = z.object({
+  maxScansPerDay:         z.number().int().min(0).max(9999).optional(),
+  maxScansPerMonth:       z.number().int().min(0).max(9999).optional(),
+  maxConcurrentScans:     z.number().int().min(1).max(20).optional(),
+  maxTargetsPerScan:      z.number().int().min(1).max(50).optional(),
+  maxThreads:             z.number().int().min(1).max(20).optional(),
+  maxScanDuration:        z.number().int().min(60).max(7200).optional(),
+  maxScanDepth:           z.enum(['fast', 'normal', 'deep']).optional(),
+  allowedCategories:      z.array(z.string()).optional(),
+  blockedModules:         z.array(z.string()).optional(),
+  canUseOffensiveModules: z.boolean().optional(),
+  canGenerateReports:     z.boolean().optional(),
+  canExportData:          z.boolean().optional(),
+  canCreateProfiles:      z.boolean().optional(),
+  canScanInternalIPs:     z.boolean().optional(),
+  canUseDeepScan:         z.boolean().optional(),
+  canScheduleScans:       z.boolean().optional(),
+});
+
+export async function getUserPermissions(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const perms = await adminService.getUserPermissions(req.params.id);
+    sendSuccess(res, perms);
+  } catch (err) { next(err); }
+}
+
+export async function updateUserPermissions(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const perms = await adminService.updateUserPermissions(req.params.id, req.body);
+    sendSuccess(res, perms);
+  } catch (err) { next(err); }
+}
+
+export async function resetUserPermissions(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const perms = await adminService.resetUserPermissions(req.params.id);
+    sendSuccess(res, perms);
+  } catch (err) { next(err); }
+}
+
+export async function getUserStats(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const stats = await adminService.getUserStats(req.params.id);
+    sendSuccess(res, stats);
+  } catch (err) { next(err); }
+}

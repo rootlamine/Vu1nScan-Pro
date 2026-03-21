@@ -6,7 +6,7 @@ import {
   createScan, listScans, getScan, deleteScan, createScanSchema,
 } from '@/controllers/scan.controller';
 import { listVulnerabilities, getStats } from '@/controllers/vuln.controller';
-import { generateReport } from '@/controllers/report.controller';
+import { generateReport, exportJSON, exportCSV } from '@/controllers/report.controller';
 
 const router = Router();
 
@@ -19,5 +19,7 @@ router.delete('/:id',                 deleteScan);
 router.get   ('/:id/vulnerabilities', listVulnerabilities);
 router.get   ('/:id/stats',           getStats);
 router.post  ('/:id/report',          generateReport);
+router.get   ('/:id/export/json',     exportJSON);
+router.get   ('/:id/export/csv',      exportCSV);
 
 export default router;

@@ -74,10 +74,16 @@ class Module(BaseModule):
                         pass
 
                 if method_found:
+                    cvss_vector = (
+                        "AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:H/A:H" if method in ("PUT", "DELETE")
+                        else "AV:N/AC:H/PR:N/UI:R/S:C/C:L/I:N/A:N"
+                    )
                     vulns.append(self.vuln(
                         name=f"Méthode HTTP dangereuse activée : {method}",
                         severity=severity,
                         cvss_score=cvss,
+                        cvss_vector=cvss_vector,
+                        cwe_id="CWE-650",
                         endpoint=url,
                         payload=f"{method} {url} HTTP/1.1",
                         description=(
@@ -85,6 +91,8 @@ class Module(BaseModule):
                             f"{impact_desc} "
                             "Cela représente une surface d'attaque inutile si non requise par l'application."
                         ),
+                        impact=impact_desc,
+                        evidence=f"Méthode {method} acceptée par le serveur (non retournée 405/404/501).",
                         recommendation=(
                             f"Désactiver la méthode {method} si elle n'est pas nécessaire. "
                             "Dans Apache : utilisez <LimitExcept GET POST>. "
@@ -105,6 +113,8 @@ class Module(BaseModule):
                                 name="TRACE HTTP activé — risque Cross-Site Tracing (XST)",
                                 severity="LOW",
                                 cvss_score=4.3,
+                                cvss_vector="AV:N/AC:H/PR:N/UI:R/S:C/C:L/I:N/A:N",
+                                cwe_id="CWE-16",
                                 endpoint=url,
                                 payload="TRACE / HTTP/1.1",
                                 description=(
@@ -112,6 +122,8 @@ class Module(BaseModule):
                                     "Cela peut permettre à un attaquant de lire des cookies HttpOnly "
                                     "via une attaque Cross-Site Tracing (XST)."
                                 ),
+                                impact="Lecture de cookies HttpOnly via XST en combinaison avec XSS.",
+                                evidence="Méthode TRACE retourne HTTP 200 avec le corps de la requête en echo.",
                                 recommendation=(
                                     "Désactiver la méthode TRACE. "
                                     "Apache : TraceEnable off. "

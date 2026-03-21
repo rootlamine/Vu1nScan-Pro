@@ -2,9 +2,9 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Users, Shield, BarChart3, ScanLine, ShieldAlert, Loader, Search, X, Plus, Mail, Lock,
-  User as UserIcon, LayoutList, LayoutGrid, Globe, Wifi, type LucideIcon,
+  User as UserIcon, LayoutList, LayoutGrid, Globe, Wifi, Settings, type LucideIcon,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -181,6 +181,314 @@ function CreateUserModal({ onClose, onCreated }: { onClose: () => void; onCreate
   );
 }
 
+/* ── Permissions Modal ───────────────────────────────────────────── */
+interface UserPermissions {
+  maxScansPerDay: number; maxScansPerMonth: number; maxConcurrentScans: number;
+  maxTargetsPerScan: number; maxThreads: number; maxScanDuration: number; maxScanDepth: string;
+  allowedCategories: string[]; blockedModules: string[];
+  canUseOffensiveModules: boolean; canGenerateReports: boolean; canExportData: boolean;
+  canCreateProfiles: boolean; canScanInternalIPs: boolean; canUseDeepScan: boolean; canScheduleScans: boolean;
+}
+interface UserStats {
+  todayUsed: number; todayMax: number; todayRemaining: number;
+  monthUsed: number; monthMax: number; monthRemaining: number;
+  runningScans: number; maxConcurrent: number;
+}
+
+const ALL_CATEGORIES = [
+  { key: 'SECURITY',          label: 'Sécurité',         color: '#FF6B6B' },
+  { key: 'NETWORK',           label: 'Réseau',            color: '#4ECDC4' },
+  { key: 'OSINT',             label: 'OSINT',             color: '#7C6FF7' },
+  { key: 'SCRAPING',          label: 'Scraping',          color: '#FFB347' },
+  { key: 'WEB_OFFENSIVE',     label: 'Web Offensif',      color: '#E05252' },
+  { key: 'API_OFFENSIVE',     label: 'API Offensif',      color: '#C0392B' },
+  { key: 'NETWORK_OFFENSIVE', label: 'Réseau Offensif',   color: '#2E86AB' },
+  { key: 'SYSTEM',            label: 'Système',           color: '#8E44AD' },
+];
+
+function PermissionsModal({ user, onClose }: { user: User; onClose: () => void }) {
+  const queryClient = useQueryClient();
+  const [tab, setTab] = useState<'limits' | 'modules' | 'features' | 'stats'>('limits');
+  const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+  const [perms, setPerms] = useState<UserPermissions | null>(null);
+
+  const { data: permsData, isLoading: permsLoading } = useQuery<{ data: { data: UserPermissions } }>({
+    queryKey: ['admin-user-perms', user.id],
+    queryFn:  () => api.get(`/admin/users/${user.id}/permissions`),
+  });
+  const { data: statsData, isLoading: statsLoading } = useQuery<{ data: { data: UserStats } }>({
+    queryKey: ['admin-user-stats', user.id],
+    queryFn:  () => api.get(`/admin/users/${user.id}/stats`),
+    enabled:  tab === 'stats',
+  });
+  const { data: modulesData } = useQuery<{ data: { data: ScanModule[] } }>({
+    queryKey: ['admin-modules'],
+    queryFn:  () => api.get('/admin/modules'),
+  });
+
+  useEffect(() => {
+    if (permsData?.data?.data) setPerms(permsData.data.data);
+  }, [permsData]);
+
+  const { mutate: savePerms, isPending: saving } = useMutation({
+    mutationFn: (data: Partial<UserPermissions>) => api.patch(`/admin/users/${user.id}/permissions`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-user-perms', user.id] });
+      setToast({ msg: 'Permissions sauvegardées', type: 'success' });
+    },
+    onError: () => setToast({ msg: 'Erreur lors de la sauvegarde', type: 'error' }),
+  });
+  const { mutate: resetPerms, isPending: resetting } = useMutation({
+    mutationFn: () => api.post(`/admin/users/${user.id}/permissions/reset`),
+    onSuccess: (res: { data: { data: UserPermissions } }) => {
+      setPerms(res.data.data);
+      queryClient.invalidateQueries({ queryKey: ['admin-user-perms', user.id] });
+      setToast({ msg: 'Permissions réinitialisées', type: 'success' });
+    },
+    onError: () => setToast({ msg: 'Erreur', type: 'error' }),
+  });
+
+  const modules = modulesData?.data?.data ?? [];
+  const userStats = statsData?.data?.data;
+
+  if (permsLoading || !perms) return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center"
+         style={{ background: 'rgba(28,28,46,.55)', backdropFilter: 'blur(4px)' }}>
+      <div className="bg-white rounded-2xl p-8"><Loader size={24} className="animate-spin" style={{ color: '#7C6FF7' }} /></div>
+    </div>
+  );
+
+  const TABS = [
+    { key: 'limits',   label: 'Limites'   },
+    { key: 'modules',  label: 'Modules'   },
+    { key: 'features', label: 'Fonctions' },
+    { key: 'stats',    label: 'Stats'     },
+  ] as const;
+
+  const SliderField = ({ label, field, min, max, unit }: {
+    label: string; field: keyof UserPermissions; min: number; max: number; unit?: string;
+  }) => (
+    <div>
+      <div className="flex justify-between text-xs mb-1">
+        <span className="font-medium" style={{ color: '#6B6B8A' }}>{label}</span>
+        <span className="font-mono font-bold text-navy">{String(perms![field])}{unit}</span>
+      </div>
+      <input type="range" min={min} max={max} value={Number(perms![field])}
+             onChange={e => setPerms(p => p ? { ...p, [field]: Number(e.target.value) } : p)}
+             className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
+             style={{ accentColor: '#7C6FF7' }} />
+      <div className="flex justify-between text-[10px] mt-0.5" style={{ color: '#6B6B8A' }}>
+        <span>{min}</span><span>{max}</span>
+      </div>
+    </div>
+  );
+
+  const Toggle = ({ label, field, desc }: { label: string; field: keyof UserPermissions; desc?: string }) => (
+    <div className="flex items-center justify-between py-2.5" style={{ borderBottom: '1px solid #F0EEFF' }}>
+      <div>
+        <p className="text-sm font-medium text-navy">{label}</p>
+        {desc && <p className="text-xs mt-0.5" style={{ color: '#6B6B8A' }}>{desc}</p>}
+      </div>
+      <button
+        onClick={() => setPerms(p => p ? { ...p, [field]: !p[field] } : p)}
+        className="w-10 h-5 rounded-full transition-all relative shrink-0"
+        style={{ background: perms![field] ? '#7C6FF7' : '#E5E7EB' }}>
+        <span className="absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all"
+              style={{ left: perms![field] ? '22px' : '2px' }} />
+      </button>
+    </div>
+  );
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center"
+         style={{ background: 'rgba(28,28,46,.55)', backdropFilter: 'blur(4px)' }}
+         onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 flex flex-col max-h-[90vh]"
+           style={{ border: '1px solid #EDE8FF' }}>
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 shrink-0" style={{ borderBottom: '1px solid #EDE8FF' }}>
+          <div>
+            <h2 className="font-bold text-navy text-base">Permissions — {user.username}</h2>
+            <p className="text-xs mt-0.5" style={{ color: '#6B6B8A' }}>{user.email} · {user.role}</p>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg"
+                  style={{ color: '#6B6B8A' }}>
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex gap-1 px-6 pt-3 shrink-0" style={{ borderBottom: '1px solid #EDE8FF' }}>
+          {TABS.map(t => (
+            <button key={t.key} onClick={() => setTab(t.key)}
+                    className="px-4 py-2 text-xs font-semibold rounded-t-lg transition-all"
+                    style={tab === t.key
+                      ? { color: '#7C6FF7', background: '#F0EEFF', borderBottom: '2px solid #7C6FF7' }
+                      : { color: '#6B6B8A', borderBottom: '2px solid transparent' }}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+
+          {/* ── Limits ── */}
+          {tab === 'limits' && (
+            <>
+              <SliderField label="Scans par jour" field="maxScansPerDay" min={1} max={9999} />
+              <SliderField label="Scans par mois" field="maxScansPerMonth" min={1} max={9999} />
+              <SliderField label="Scans simultanés" field="maxConcurrentScans" min={1} max={20} />
+              <SliderField label="Threads maximum" field="maxThreads" min={1} max={20} />
+              <SliderField label="Durée max (secondes)" field="maxScanDuration" min={60} max={7200} unit="s" />
+              <div>
+                <label className="text-xs font-medium mb-1.5 block" style={{ color: '#6B6B8A' }}>Profondeur maximale</label>
+                <div className="flex gap-2">
+                  {['fast', 'normal', 'deep'].map(d => (
+                    <button key={d} onClick={() => setPerms(p => p ? { ...p, maxScanDepth: d } : p)}
+                            className="flex-1 py-2 rounded-lg text-xs font-semibold transition-all capitalize"
+                            style={perms.maxScanDepth === d
+                              ? { background: '#7C6FF7', color: '#fff' }
+                              : { background: '#F0EEFF', color: '#7C6FF7', border: '1px solid #EDE8FF' }}>
+                      {d}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* ── Modules ── */}
+          {tab === 'modules' && (
+            <>
+              <div>
+                <p className="text-xs font-semibold mb-2 text-navy">Catégories autorisées</p>
+                <p className="text-[11px] mb-3" style={{ color: '#6B6B8A' }}>Vide = toutes autorisées</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {ALL_CATEGORIES.map(cat => {
+                    const allowed = perms.allowedCategories.length === 0 || perms.allowedCategories.includes(cat.key);
+                    return (
+                      <button key={cat.key}
+                              onClick={() => {
+                                setPerms(p => {
+                                  if (!p) return p;
+                                  const current = p.allowedCategories;
+                                  if (current.length === 0) {
+                                    // All allowed → restrict to all except this one
+                                    return { ...p, allowedCategories: ALL_CATEGORIES.filter(c => c.key !== cat.key).map(c => c.key) };
+                                  }
+                                  return current.includes(cat.key)
+                                    ? { ...p, allowedCategories: current.filter(c => c !== cat.key) }
+                                    : { ...p, allowedCategories: [...current, cat.key] };
+                                });
+                              }}
+                              className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all text-left"
+                              style={allowed
+                                ? { background: `${cat.color}20`, color: cat.color, border: `1px solid ${cat.color}40` }
+                                : { background: '#F5F5F5', color: '#9CA3AF', border: '1px solid #E5E7EB' }}>
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ background: allowed ? cat.color : '#9CA3AF' }} />
+                        {cat.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <button onClick={() => setPerms(p => p ? { ...p, allowedCategories: [] } : p)}
+                        className="mt-2 text-xs font-semibold" style={{ color: '#7C6FF7' }}>
+                  Tout autoriser
+                </button>
+              </div>
+              <div style={{ borderTop: '1px solid #F0EEFF', paddingTop: '12px' }}>
+                <p className="text-xs font-semibold mb-2 text-navy">Modules bloqués</p>
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {perms.blockedModules.map(slug => (
+                    <span key={slug} className="flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full"
+                          style={{ background: '#FFF0F0', color: '#FF6B6B', border: '1px solid #FFD0D0' }}>
+                      {slug}
+                      <button onClick={() => setPerms(p => p ? { ...p, blockedModules: p.blockedModules.filter(s => s !== slug) } : p)}>
+                        <X size={10} />
+                      </button>
+                    </span>
+                  ))}
+                  {perms.blockedModules.length === 0 && <span className="text-xs" style={{ color: '#9CA3AF' }}>Aucun module bloqué</span>}
+                </div>
+                <select onChange={e => {
+                  const slug = e.target.value;
+                  if (slug && !perms.blockedModules.includes(slug))
+                    setPerms(p => p ? { ...p, blockedModules: [...p.blockedModules, slug] } : p);
+                  e.target.value = '';
+                }}
+                        className="w-full text-xs px-3 py-2 rounded-lg outline-none"
+                        style={{ border: '1px solid #EDE8FF', color: '#1C1C2E', background: '#FAFAFA' }}>
+                  <option value="">+ Ajouter un module bloqué</option>
+                  {modules.filter(m => !perms.blockedModules.includes(m.slug)).map(m => (
+                    <option key={m.slug} value={m.slug}>{m.name}</option>
+                  ))}
+                </select>
+              </div>
+            </>
+          )}
+
+          {/* ── Features ── */}
+          {tab === 'features' && (
+            <div className="divide-y" style={{ color: '#1C1C2E' }}>
+              <Toggle label="Modules offensifs" field="canUseOffensiveModules" desc="WEB_OFFENSIVE, API_OFFENSIVE, NETWORK_OFFENSIVE" />
+              <Toggle label="Deep Scan" field="canUseDeepScan" desc="Mode de scan approfondi" />
+              <Toggle label="IPs internes" field="canScanInternalIPs" desc="192.168.x.x, 10.x.x.x, 127.x.x.x" />
+              <Toggle label="Génération de rapports PDF" field="canGenerateReports" />
+              <Toggle label="Export de données (JSON/CSV)" field="canExportData" />
+              <Toggle label="Création de profils de scan" field="canCreateProfiles" />
+              <Toggle label="Planification de scans" field="canScheduleScans" desc="Fonctionnalité à venir" />
+            </div>
+          )}
+
+          {/* ── Stats ── */}
+          {tab === 'stats' && (
+            statsLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader size={20} className="animate-spin" style={{ color: '#7C6FF7' }} />
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {[
+                  { label: "Scans aujourd'hui", used: userStats?.todayUsed ?? 0, max: userStats?.todayMax ?? 0 },
+                  { label: 'Scans ce mois',     used: userStats?.monthUsed ?? 0, max: userStats?.monthMax ?? 0 },
+                  { label: 'Scans en cours',    used: userStats?.runningScans ?? 0, max: userStats?.maxConcurrent ?? 0 },
+                ].map(({ label, used, max }) => (
+                  <div key={label}>
+                    <div className="flex justify-between text-xs mb-1">
+                      <span style={{ color: '#6B6B8A' }}>{label}</span>
+                      <span className="font-mono font-bold text-navy">{used} / {max}</span>
+                    </div>
+                    <div className="w-full rounded-full h-2" style={{ background: '#F0EEFF' }}>
+                      <div className="h-2 rounded-full"
+                           style={{ width: `${max > 0 ? Math.min(100, (used / max) * 100) : 0}%`, background: '#7C6FF7' }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex gap-3 px-6 py-4 shrink-0" style={{ borderTop: '1px solid #EDE8FF' }}>
+          <button onClick={() => resetPerms()} disabled={resetting}
+                  className="px-4 py-2.5 rounded-xl text-xs font-semibold transition-all disabled:opacity-50"
+                  style={{ border: '1.5px solid #EDE8FF', color: '#6B6B8A', background: '#FAFAFA' }}>
+            {resetting ? 'Réinitialisation…' : 'Réinitialiser'}
+          </button>
+          <button onClick={() => savePerms(perms!)} disabled={saving}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50"
+                  style={{ background: '#7C6FF7' }}>
+            {saving ? 'Sauvegarde…' : 'Sauvegarder'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── KPI Card ─────────────────────────────────────────────────────── */
 function KpiCard({ title, value, icon: Icon, topColor, iconBg, iconColor }: {
   title: string; value: number; icon: LucideIcon;
@@ -210,6 +518,7 @@ export default function AdminPage() {
   const queryClient  = useQueryClient();
   const [toast, setToast]         = useState<{ msg: string; type: 'success'|'error' } | null>(null);
   const [showAddUser, setShowAddUser] = useState(false);
+  const [permUser, setPermUser]       = useState<User | null>(null);
   const [modSearch, setModSearch]  = useState('');
   const [modCat, setModCat]        = useState<'ALL' | ModuleCategory>('ALL');
   const [modPage, setModPage]      = useState(1);
@@ -281,6 +590,7 @@ export default function AdminPage() {
           }}
         />
       )}
+      {permUser && <PermissionsModal user={permUser} onClose={() => setPermUser(null)} />}
       <TopBar title={`Administration — ${tabLabel}`} subtitle="Gestion de la plateforme" />
 
       <div className="px-8 py-6">
@@ -340,6 +650,15 @@ export default function AdminPage() {
                          disabled={u.id === me?.id} className="accent-violet" />
                   Actif
                 </label>
+                <button
+                  onClick={() => setPermUser(u)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+                  style={{ border: '1px solid #EDE8FF', color: '#7C6FF7', background: '#F0EEFF' }}
+                  title="Gérer les permissions"
+                >
+                  <Settings size={12} />
+                  Permissions
+                </button>
               </div>
             ))}
           </div>

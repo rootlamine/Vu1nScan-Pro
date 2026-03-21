@@ -93,6 +93,8 @@ class Module(BaseModule):
                                 name="Server-Side Request Forgery (SSRF) détecté",
                                 severity="HIGH",
                                 cvss_score=8.6,
+                                cvss_vector="AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:N/A:N",
+                                cwe_id="CWE-918",
                                 endpoint=url,
                                 parameter=param,
                                 payload=payload,
@@ -101,6 +103,8 @@ class Module(BaseModule):
                                     f"Le serveur a effectué une requête vers '{payload}' "
                                     "et la réponse contient des données de l'infrastructure interne."
                                 ),
+                                impact="Accès aux métadonnées cloud (AWS/GCP/Azure), scan réseau interne, pivot d'infrastructure.",
+                                evidence=f"Réponse contient des signatures cloud/réseau interne après injection de '{payload}' dans '{param}'.",
                                 recommendation=(
                                     "Valider et restreindre les URLs acceptées par whitelist. "
                                     "Bloquer les plages d'adresses internes (RFC1918, 169.254.x.x). "
@@ -129,6 +133,8 @@ class Module(BaseModule):
                                     name="Server-Side Request Forgery (SSRF) détecté",
                                     severity="HIGH",
                                     cvss_score=8.6,
+                                    cvss_vector="AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:N/A:N",
+                                    cwe_id="CWE-918",
                                     endpoint=url,
                                     parameter=param_name,
                                     payload=payload,
@@ -137,6 +143,8 @@ class Module(BaseModule):
                                         f"effectuer une requête vers '{payload}'. "
                                         "Des données de l'infrastructure cloud interne ont été exposées."
                                     ),
+                                    impact="Accès aux métadonnées cloud (AWS/GCP/Azure), scan réseau interne, pivot d'infrastructure.",
+                                    evidence=f"Réponse contient des signatures cloud/réseau interne après injection de '{payload}' dans '{param_name}'.",
                                     recommendation=(
                                         "Valider les URLs par whitelist. "
                                         "Bloquer les accès aux métadonnées cloud (169.254.169.254). "

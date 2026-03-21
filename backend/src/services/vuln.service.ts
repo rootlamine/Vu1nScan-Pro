@@ -3,6 +3,7 @@ import { VulnRepository } from '@/repositories/vuln.repository';
 import { ScanRepository } from '@/repositories/scan.repository';
 import { AppError }       from '@/utils/errors';
 import { VulnFilters, VulnStats } from '@/domain/interfaces';
+import { UpdateVulnDTO } from '@/domain/types';
 
 const vulnRepo = new VulnRepository();
 const scanRepo = new ScanRepository();
@@ -32,5 +33,20 @@ export class VulnService {
 
   async getGlobalStats(userId: string): Promise<VulnStats> {
     return vulnRepo.countByUserIdAndSeverity(userId);
+  }
+
+  async updateVuln(id: string, userId: string, dto: UpdateVulnDTO): Promise<Vulnerability> {
+    const vuln = await vulnRepo.findById(id);
+    if (!vuln) throw new AppError('Vulnérabilité introuvable', 404);
+
+    // Check ownership via the scan
+    const scan = await scanRepo.findById(vuln.scanId);
+    if (!scan || scan.userId !== userId) throw new AppError('Accès refusé', 403);
+
+    const resolvedAt = dto.isResolved ? new Date() : (dto.isResolved === false ? null : undefined);
+    return vulnRepo.update(id, {
+      ...dto,
+      ...(resolvedAt !== undefined ? { resolvedAt } : {}),
+    });
   }
 }

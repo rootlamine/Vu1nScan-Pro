@@ -1,9 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
-import { AuthService } from '@/services/auth.service';
+import { AuthService }       from '@/services/auth.service';
+import { PermissionService } from '@/services/permission.service';
 import { sendSuccess } from '@/utils/response';
 
 const authService = new AuthService();
+const permService = new PermissionService();
 
 // ─── Schémas de validation ────────────────────────────────────────────────────
 
@@ -71,5 +73,15 @@ export async function changePassword(req: Request, res: Response, next: NextFunc
   try {
     await authService.changePassword(req.user!.userId, req.body);
     sendSuccess(res, { message: 'Mot de passe modifié avec succès' });
+  } catch (err) { next(err); }
+}
+
+export async function myLimits(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const [perms, remaining] = await Promise.all([
+      permService.getPermissions(req.user!.userId),
+      permService.getRemainingScans(req.user!.userId),
+    ]);
+    sendSuccess(res, { permissions: perms, remaining });
   } catch (err) { next(err); }
 }

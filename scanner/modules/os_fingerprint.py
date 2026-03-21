@@ -146,6 +146,8 @@ class Module(BaseModule):
                     name=f"Système d'exploitation identifié : {os_summary}",
                     severity="LOW",
                     cvss_score=3.7,
+                    cvss_vector="AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+                    cwe_id="CWE-200",
                     endpoint=url,
                     description=(
                         f"Le système d'exploitation de la cible a été identifié : {os_summary}. "
@@ -153,6 +155,8 @@ class Module(BaseModule):
                         "Ces informations permettent à un attaquant de cibler des vulnérabilités "
                         "et des exploits spécifiques à l'OS."
                     ),
+                    impact="Fingerprinting OS permettant le ciblage d'exploits kernel et service spécifiques.",
+                    evidence=f"OS identifié via : {evidence_str}.",
                     recommendation=(
                         "Supprimer les en-têtes révélateurs (Server, X-Powered-By, X-AspNet-Version). "
                         "Apache : ServerTokens Prod. Nginx : server_tokens off. "

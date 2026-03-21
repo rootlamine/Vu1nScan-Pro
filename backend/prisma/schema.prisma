@@ -49,16 +49,44 @@ enum ModuleCategory {
 }
 
 model User {
-  id           String        @id @default(uuid())
-  username     String        @unique
-  email        String        @unique
+  id           String           @id @default(uuid())
+  username     String           @unique
+  email        String           @unique
   passwordHash String
-  role         Role          @default(USER)
-  isActive     Boolean       @default(true)
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  role         Role             @default(USER)
+  isActive     Boolean          @default(true)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
   scans        Scan[]
   profiles     ScanProfile[]
+  permissions  UserPermissions?
+}
+
+model UserPermissions {
+  id                    String   @id @default(uuid())
+  userId                String   @unique
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Limites quantitatives
+  maxScansPerDay        Int      @default(10)
+  maxScansPerMonth      Int      @default(100)
+  maxConcurrentScans    Int      @default(2)
+  maxTargetsPerScan     Int      @default(1)
+  maxThreads            Int      @default(5)
+  maxScanDuration       Int      @default(300)
+  maxScanDepth          String   @default("normal")
+  // Catégories & modules
+  allowedCategories     String[]
+  blockedModules        String[]
+  // Feature flags
+  canUseOffensiveModules Boolean @default(false)
+  canGenerateReports    Boolean  @default(true)
+  canExportData         Boolean  @default(true)
+  canCreateProfiles     Boolean  @default(true)
+  canScanInternalIPs    Boolean  @default(false)
+  canUseDeepScan        Boolean  @default(false)
+  canScheduleScans      Boolean  @default(false)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 }
 
 model Scan {
@@ -79,20 +107,28 @@ model Scan {
 }
 
 model Vulnerability {
-  id             String   @id @default(uuid())
-  scanId         String
-  scan           Scan     @relation(fields: [scanId], references: [id], onDelete: Cascade)
-  name           String
-  severity       Severity
-  cvssScore      Float?
-  cveId          String?
-  endpoint       String?
-  parameter      String?
-  description    String
-  payload        String?
-  recommendation String
-  references     String[]
-  createdAt      DateTime @default(now())
+  id              String    @id @default(uuid())
+  scanId          String
+  scan            Scan      @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  name            String
+  severity        Severity
+  cvssScore       Float?
+  cvssVector      String?
+  cveId           String?
+  cweId           String?
+  endpoint        String?
+  parameter       String?
+  description     String
+  payload         String?
+  evidence        String?
+  impact          String?
+  recommendation  String
+  references      String[]
+  isResolved      Boolean   @default(false)
+  isFalsePositive Boolean   @default(false)
+  notes           String?
+  resolvedAt      DateTime?
+  createdAt       DateTime  @default(now())
 }
 
 model ScanModule {

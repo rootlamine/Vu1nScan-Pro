@@ -108,12 +108,16 @@ class JavascriptAnalyzer(BaseModule):
                                 name=f"{label} dans JavaScript",
                                 severity=severity,
                                 cvss_score=cvss,
+                                cvss_vector="AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H" if cvss >= 9.5 else "AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+                                cwe_id="CWE-312",
                                 endpoint=js_url,
                                 description=(
                                     f"Un secret de type « {label} » a été détecté dans le fichier JavaScript. "
                                     f"Extrait : {snippet}... "
                                     "Ce secret est accessible à tout utilisateur consultant le site."
                                 ),
+                                impact="Compromission du compte/service associé, accès non autorisé aux ressources cloud ou API.",
+                                evidence=f"Secret détecté dans {js_url} : {snippet[:60]}…",
                                 recommendation=(
                                     "Ne jamais inclure de secrets dans le code JavaScript front-end. "
                                     "Utilisez des variables d'environnement côté serveur et une API proxy. "
@@ -132,10 +136,14 @@ class JavascriptAnalyzer(BaseModule):
                                 name="Commentaire sensible dans JavaScript",
                                 severity="LOW",
                                 cvss_score=3.1,
+                                cvss_vector="AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+                                cwe_id="CWE-312",
                                 endpoint=js_url,
                                 description=(
                                     f"Un commentaire potentiellement sensible a été trouvé dans le JS : {snippet}"
                                 ),
+                                impact="Fuite d'informations sur la logique interne, vulnérabilités connues ou credentials.",
+                                evidence=f"Commentaire détecté : {snippet[:80]}",
                                 recommendation=(
                                     "Supprimez tous les commentaires contenant des informations sensibles. "
                                     "Utilisez un minifier/obfuscator en production."

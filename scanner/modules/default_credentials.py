@@ -159,6 +159,8 @@ class Module(BaseModule):
                                 name=f"Identifiants par défaut acceptés (HTTP Basic Auth) : {creds_str}",
                                 severity="CRITICAL",
                                 cvss_score=9.8,
+                                cvss_vector="AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+                                cwe_id="CWE-798",
                                 endpoint=url,
                                 payload=creds_str,
                                 description=(
@@ -166,6 +168,8 @@ class Module(BaseModule):
                                     f"les identifiants par défaut '{creds_str}'. "
                                     "Un attaquant peut accéder immédiatement à l'interface protégée."
                                 ),
+                                impact="Accès administrateur complet, compromission totale de l'application.",
+                                evidence=f"HTTP 200 retourné avec les credentials '{creds_str}' via HTTP Basic Auth.",
                                 recommendation=(
                                     "Changer immédiatement les identifiants par défaut. "
                                     "Utiliser des mots de passe forts et uniques. "
@@ -202,6 +206,8 @@ class Module(BaseModule):
                             name=f"Identifiants par défaut acceptés (formulaire) : {creds_str}",
                             severity="CRITICAL",
                             cvss_score=9.8,
+                            cvss_vector="AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+                            cwe_id="CWE-521",
                             endpoint=form_found["endpoint"],
                             payload=creds_str,
                             description=(
@@ -209,6 +215,8 @@ class Module(BaseModule):
                                 f"accepte les identifiants par défaut '{creds_str}'. "
                                 "L'application est compromise par des credentials triviaux."
                             ),
+                            impact="Compromission totale du compte, accès non autorisé à toutes les fonctionnalités.",
+                            evidence=f"Connexion réussie avec '{creds_str}' — redirection ou indicateur de succès détecté.",
                             recommendation=(
                                 "Forcer le changement du mot de passe au premier démarrage. "
                                 "Implémenter une politique de mots de passe forts. "

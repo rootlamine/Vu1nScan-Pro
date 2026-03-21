@@ -93,6 +93,8 @@ class Module(BaseModule):
                                 name="Redirection ouverte détectée",
                                 severity="MEDIUM",
                                 cvss_score=6.1,
+                                cvss_vector="AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N",
+                                cwe_id="CWE-601",
                                 endpoint=test_url,
                                 parameter=param,
                                 payload=payload,
@@ -100,6 +102,8 @@ class Module(BaseModule):
                                     f"Le paramètre '{param}' permet une redirection vers un domaine externe arbitraire. "
                                     "Peut être exploité pour le phishing ou le vol de tokens OAuth."
                                 ),
+                                impact="Phishing, vol de tokens OAuth/SSO, détournement de sessions.",
+                                evidence=f"Redirection vers 'evil.com' confirmée avec le payload '{payload}'.",
                                 recommendation=(
                                     "Valider les URLs de redirection par rapport à une liste blanche de domaines autorisés. "
                                     "Ne jamais utiliser directement les entrées utilisateur comme URL de redirection."

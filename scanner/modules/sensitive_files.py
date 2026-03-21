@@ -71,15 +71,24 @@ class Module(BaseModule):
                             if not any(sig and sig.lower() in content.lower() for sig in signatures if sig):
                                 continue  # False positive, content doesn't match
 
+                        cvss_vector = (
+                            "AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H" if severity == "CRITICAL"
+                            else "AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N" if severity == "HIGH"
+                            else "AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+                        )
                         vulns.append(self.vuln(
                             name=label,
                             severity=severity,
                             cvss_score=cvss,
+                            cvss_vector=cvss_vector,
+                            cwe_id="CWE-538",
                             endpoint=target,
                             description=(
                                 f"Le fichier '{path}' est accessible publiquement (HTTP 200). "
                                 "Ce fichier peut contenir des informations sensibles exploitables par un attaquant."
                             ),
+                            evidence=f"Fichier '{path}' accessible, HTTP 200, contenu correspondant aux signatures attendues.",
+                            impact="Fuite de credentials, clés SSH, dumps de base de données, configuration applicative.",
                             recommendation=(
                                 f"Supprimer ou restreindre l'accès au fichier '{path}'. "
                                 "Configurer le serveur web pour bloquer l'accès aux fichiers sensibles. "

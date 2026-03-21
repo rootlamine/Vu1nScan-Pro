@@ -25,7 +25,7 @@ export const createScanSchema = z.object({
 
 export async function createScan(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const scan = await scanService.createScan(req.user!.userId, req.body);
+    const scan = await scanService.createScan(req.user!.userId, req.user!.role, req.body);
     sendSuccess(res, scan, 201);
   } catch (err) { next(err); }
 }

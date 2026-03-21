@@ -54,12 +54,16 @@ class EmailHarvester(BaseModule):
                     name=f"Adresses email exposées ({len(emails)} trouvées)",
                     severity="LOW",
                     cvss_score=3.1,
+                    cvss_vector="AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+                    cwe_id="CWE-200",
                     endpoint=origin,
                     description=(
                         f"{len(emails)} adresse(s) email trouvée(s) en clair sur le site. "
                         f"Exemples : {', '.join(sample[:5])}. "
                         "Ces emails peuvent être utilisés pour du phishing ou de la reconnaissance."
                     ),
+                    impact="Phishing ciblé, spam, énumération des employés et de la structure organisationnelle.",
+                    evidence=f"Emails récoltés : {', '.join(sample[:5])}.",
                     recommendation=(
                         "Obfusquez les adresses email avec du JavaScript ou des images. "
                         "Utilisez des formulaires de contact plutôt que des adresses email directes. "

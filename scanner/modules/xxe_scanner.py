@@ -122,6 +122,8 @@ class Module(BaseModule):
                                     name="XML External Entity (XXE) Injection détectée",
                                     severity="HIGH",
                                     cvss_score=8.2,
+                                    cvss_vector="AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:L/A:L",
+                                    cwe_id="CWE-611",
                                     endpoint=endpoint,
                                     payload=payload[:80] + "…",
                                     description=(
@@ -129,6 +131,8 @@ class Module(BaseModule):
                                         "Un payload XXE a provoqué une réponse révélatrice, permettant "
                                         "potentiellement la lecture de fichiers système ou des requêtes réseau internes."
                                     ),
+                                    impact="Lecture de fichiers système, SSRF, déni de service (Billion Laughs), exfiltration de données.",
+                                    evidence=f"Payload XXE envoyé à {endpoint}, réponse contenant des signatures de fichiers système ou d'entités XML.",
                                     recommendation=(
                                         "Désactiver le traitement des entités externes XML (DTD processing). "
                                         "Utiliser des parseurs XML sécurisés avec external entity disabled. "
@@ -157,6 +161,8 @@ class Module(BaseModule):
                             name="Endpoint XML détecté — risque XXE potentiel",
                             severity="HIGH",
                             cvss_score=8.2,
+                            cvss_vector="AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:L/A:L",
+                            cwe_id="CWE-611",
                             endpoint=url,
                             payload="<test/>",
                             description=(
@@ -164,6 +170,8 @@ class Module(BaseModule):
                                 "Si le parseur XML n'est pas correctement sécurisé, "
                                 "il peut être vulnérable aux attaques XXE."
                             ),
+                            impact="Lecture de fichiers système, SSRF, exfiltration de données internes.",
+                            evidence="Serveur répond au Content-Type application/xml avec un corps XML valide.",
                             recommendation=(
                                 "Désactiver le traitement des entités externes. "
                                 "Utiliser un parseur XML avec entity expansion désactivé. "

@@ -52,19 +52,64 @@ export interface Scan {
 }
 
 export interface Vulnerability {
-  id:             string;
-  scanId:         string;
-  name:           string;
-  severity:       Severity;
-  cvssScore:      number | null;
-  cveId:          string | null;
-  endpoint:       string | null;
-  parameter:      string | null;
-  description:    string;
-  payload:        string | null;
-  recommendation: string;
-  references:     string[];
-  createdAt:      string;
+  id:              string;
+  scanId:          string;
+  name:            string;
+  severity:        Severity;
+  cvssScore:       number | null;
+  cvssVector:      string | null;
+  cveId:           string | null;
+  cweId:           string | null;
+  endpoint:        string | null;
+  parameter:       string | null;
+  description:     string;
+  payload:         string | null;
+  evidence:        string | null;
+  impact:          string | null;
+  recommendation:  string;
+  references:      string[];
+  isResolved:      boolean;
+  isFalsePositive: boolean;
+  notes:           string | null;
+  resolvedAt:      string | null;
+  createdAt:       string;
+}
+
+export interface UserPermissions {
+  id:                    string;
+  userId:                string;
+  maxScansPerDay:        number;
+  maxScansPerMonth:      number;
+  maxConcurrentScans:    number;
+  maxTargetsPerScan:     number;
+  maxThreads:            number;
+  maxScanDuration:       number;
+  maxScanDepth:          string;
+  allowedCategories:     string[];
+  blockedModules:        string[];
+  canUseOffensiveModules: boolean;
+  canGenerateReports:    boolean;
+  canExportData:         boolean;
+  canCreateProfiles:     boolean;
+  canScanInternalIPs:    boolean;
+  canUseDeepScan:        boolean;
+  canScheduleScans:      boolean;
+  createdAt:             string;
+  updatedAt:             string;
+}
+
+export interface MyLimitsResp {
+  permissions: UserPermissions;
+  remaining: {
+    todayUsed:      number;
+    todayMax:       number;
+    todayRemaining: number;
+    monthUsed:      number;
+    monthMax:       number;
+    monthRemaining: number;
+    runningScans:   number;
+    maxConcurrent:  number;
+  };
 }
 
 export interface ScanProfile {

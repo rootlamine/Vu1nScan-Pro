@@ -1,20 +1,19 @@
-import { Scan } from '@prisma/client';
-import { ScanRepository }   from '@/repositories/scan.repository';
-import { ModuleRepository } from '@/repositories/module.repository';
-import { addScanJob }       from '@/jobs/scan-queue';
-import { AppError }         from '@/utils/errors';
+import { Scan, Role } from '@prisma/client';
+import { ScanRepository }    from '@/repositories/scan.repository';
+import { ModuleRepository }  from '@/repositories/module.repository';
+import { PermissionService } from '@/services/permission.service';
+import { addScanJob }        from '@/jobs/scan-queue';
+import { AppError }          from '@/utils/errors';
 import { CreateScanDTO, ScanJobData } from '@/domain/types';
-import { ScanWithModules }  from '@/domain/interfaces';
+import { ScanWithModules }   from '@/domain/interfaces';
 
 const scanRepo   = new ScanRepository();
 const moduleRepo = new ModuleRepository();
+const permSvc    = new PermissionService();
 
 export class ScanService {
-  async createScan(userId: string, dto: CreateScanDTO): Promise<ScanWithModules> {
-    // 1. Créer le scan en base
-    const scan = await scanRepo.create(userId, dto);
-
-    // 2. Récupérer les modules — si moduleIds fournis, les utiliser, sinon defaultEnabled
+  async createScan(userId: string, role: Role, dto: CreateScanDTO): Promise<ScanWithModules> {
+    // 1. Récupérer les modules candidats (avant création scan, pour vérif permissions)
     let activeModules;
     if (dto.moduleIds && dto.moduleIds.length > 0) {
       activeModules = await moduleRepo.findByIds(dto.moduleIds);
@@ -27,10 +26,28 @@ export class ScanService {
       throw new AppError('Aucun module de scan disponible', 503);
     }
 
-    // 3. Créer les ScanModuleResults (PENDING)
+    // 2. Vérifier les permissions
+    const moduleCategories = activeModules.map(m => m.category as string);
+    await permSvc.checkScanPermissions(userId, role, dto, moduleCategories);
+
+    // 3. Filtrer les modules bloqués pour les non-admins
+    if (role !== 'ADMIN') {
+      const perms = await permSvc.getPermissions(userId);
+      if (perms.blockedModules.length > 0) {
+        activeModules = activeModules.filter(m => !perms.blockedModules.includes(m.slug));
+      }
+      if (!activeModules.length) {
+        throw new AppError('Tous les modules sélectionnés sont bloqués pour votre compte', 403);
+      }
+    }
+
+    // 4. Créer le scan en base
+    const scan = await scanRepo.create(userId, dto);
+
+    // 5. Créer les ScanModuleResults (PENDING)
     await moduleRepo.createModuleResults(scan.id, activeModules.map(m => m.id));
 
-    // 4. Ajouter le job BullMQ
+    // 6. Ajouter le job BullMQ
     const jobData: ScanJobData = {
       scanId:      scan.id,
       targetUrl:   dto.targetUrl,
@@ -39,7 +56,7 @@ export class ScanService {
     };
     await addScanJob(jobData);
 
-    // 5. Retourner le scan avec ses moduleResults
+    // 7. Retourner le scan avec ses moduleResults
     const fullScan = await scanRepo.findById(scan.id);
     return fullScan!;
   }

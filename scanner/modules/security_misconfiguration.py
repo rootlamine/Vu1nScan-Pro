@@ -97,12 +97,21 @@ class Module(BaseModule):
                                 severity = "CRITICAL"
                                 cvss = 9.1
 
+                        cvss_vector = (
+                            "AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H" if severity == "CRITICAL"
+                            else "AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N" if severity == "HIGH"
+                            else "AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N"
+                        )
                         vulns.append(self.vuln(
                             name=f"{label} accessible",
                             severity=severity,
                             cvss_score=cvss,
+                            cvss_vector=cvss_vector,
+                            cwe_id="CWE-16",
                             endpoint=target,
                             description=description,
+                            evidence=f"Ressource '{path}' accessible publiquement, HTTP {resp.status_code}.",
+                            impact="Exposition d'interfaces d'administration, credentials, configuration serveur.",
                             recommendation=(
                                 f"Restreindre l'accès à '{path}' par IP, authentification forte, "
                                 "ou le supprimer du serveur de production. "

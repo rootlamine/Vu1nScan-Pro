@@ -118,6 +118,8 @@ class Module(BaseModule):
                         name=f"Banner de service exposé : {svc_name} sur port {port}",
                         severity="MEDIUM",
                         cvss_score=5.0,
+                        cvss_vector="AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+                        cwe_id="CWE-200",
                         endpoint=f"{host}:{port}",
                         description=(
                             f"Le service {service} (port {port}/tcp) expose son banner de version : "
@@ -125,6 +127,8 @@ class Module(BaseModule):
                             "Les informations de version permettent à un attaquant de cibler des CVEs "
                             "spécifiques à cette version du logiciel."
                         ),
+                        impact="Reconnaissance facilitée, ciblage de CVEs connus pour la version exposée.",
+                        evidence=f"Banner reçu sur {host}:{port} : '{version_str}'.",
                         recommendation=(
                             "Masquer ou supprimer les banners de service. "
                             "Apache : ServerTokens Prod, ServerSignature Off. "
@@ -150,11 +154,15 @@ class Module(BaseModule):
                                 name=f"Version de serveur exposée dans les en-têtes HTTP : {name}",
                                 severity="MEDIUM",
                                 cvss_score=5.0,
+                                cvss_vector="AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+                                cwe_id="CWE-200",
                                 endpoint=url,
                                 description=(
                                     f"L'en-tête HTTP révèle la version du serveur : '{hdr_val}'. "
                                     "Cette information aide un attaquant à identifier les vulnérabilités connues."
                                 ),
+                                impact="Fingerprinting du stack technique, ciblage de CVEs connus.",
+                                evidence=f"En-tête HTTP exposant la version : '{hdr_val}'.",
                                 recommendation=(
                                     "Supprimer ou masquer les en-têtes Server et X-Powered-By. "
                                     "Apache : ServerTokens Prod. Nginx : server_tokens off. "

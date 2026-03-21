@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft, Download, Search, ChevronDown, ChevronUp,
   CheckCircle2, AlertTriangle, RefreshCw, ChevronLeft, ChevronRight, ExternalLink,
+  FileJson, FileText, Ban, MessageSquare, ShieldCheck,
 } from 'lucide-react';
 import { Layout } from '@/components/ui/Layout';
 import { Toast }  from '@/components/ui/Toast';
@@ -23,13 +24,31 @@ const SEV: Record<string, { label: string; bg: string; color: string; border: st
 };
 
 /* ── Vuln card accordion ──────────────────────────────────────────── */
-function VulnCard({ vuln, open, onToggle }: {
+function VulnCard({ vuln, open, onToggle, onUpdated }: {
   vuln: Vulnerability; open: boolean; onToggle: () => void;
+  onUpdated: (id: string, data: Partial<Vulnerability>) => void;
 }) {
   const c = SEV[vuln.severity] ?? SEV.LOW;
+  const [localNotes, setLocalNotes] = useState(vuln.notes ?? '');
+  const [notesDirty, setNotesDirty] = useState(false);
+  const queryClient = useQueryClient();
+
+  const { mutate: updateVuln } = useMutation({
+    mutationFn: (data: { isResolved?: boolean; isFalsePositive?: boolean; notes?: string }) =>
+      api.patch(`/vulnerabilities/${vuln.id}`, data),
+    onSuccess: (res: { data: { data: Vulnerability } }) => {
+      onUpdated(vuln.id, res.data.data);
+      queryClient.invalidateQueries({ queryKey: ['vulns'] });
+      setNotesDirty(false);
+    },
+  });
+
   return (
     <div className="bg-white rounded-2xl overflow-hidden transition-all"
-         style={{ border: open ? `1.5px solid ${c.border}` : '1px solid #EDE8FF' }}>
+         style={{
+           border: open ? `1.5px solid ${c.border}` : '1px solid #EDE8FF',
+           opacity: vuln.isFalsePositive ? 0.6 : 1,
+         }}>
       <button
         className="w-full flex items-center gap-4 px-5 py-4 text-left transition-all"
         style={{ background: open ? `${c.bg}60` : 'transparent' }}
@@ -40,7 +59,17 @@ function VulnCard({ vuln, open, onToggle }: {
           {c.label}
         </span>
         <div className="flex-1 min-w-0">
-          <p className="font-bold text-navy text-sm">{vuln.name}</p>
+          <p className="font-bold text-navy text-sm flex items-center gap-2">
+            {vuln.name}
+            {vuln.isResolved && (
+              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+                    style={{ background: '#dcfce7', color: '#16a34a' }}>Résolu</span>
+            )}
+            {vuln.isFalsePositive && (
+              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+                    style={{ background: '#f3f4f6', color: '#6b7280' }}>Faux positif</span>
+            )}
+          </p>
           {vuln.endpoint && (
             <p className="font-mono text-xs mt-0.5 truncate" style={{ color: '#6B6B8A' }}>
               {vuln.endpoint}
@@ -67,6 +96,18 @@ function VulnCard({ vuln, open, onToggle }: {
                 🔗 {vuln.cveId}
               </span>
             )}
+            {vuln.cweId && (
+              <span className="text-xs font-mono px-2.5 py-0.5 rounded-full font-semibold"
+                    style={{ background: '#F0EEFF', color: '#7C6FF7', border: '1px solid #EDE8FF' }}>
+                {vuln.cweId}
+              </span>
+            )}
+            {vuln.cvssVector && (
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded"
+                    style={{ background: '#1C1C2E', color: '#4ECDC4' }}>
+                {vuln.cvssVector}
+              </span>
+            )}
             {vuln.parameter && (
               <span className="text-xs font-mono px-2.5 py-0.5 rounded-full"
                     style={{ background: '#EDE8FF', color: '#6B6B8A' }}>
@@ -77,28 +118,41 @@ function VulnCard({ vuln, open, onToggle }: {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider mb-2 flex items-center gap-1"
-                 style={{ color: '#6B6B8A' }}>
+              <p className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: '#6B6B8A' }}>
                 ⓘ Description
               </p>
-              <p className="text-sm leading-relaxed" style={{ color: '#6B6B8A' }}>
-                {vuln.description}
-              </p>
+              <p className="text-sm leading-relaxed" style={{ color: '#6B6B8A' }}>{vuln.description}</p>
+              {vuln.impact && (
+                <div className="mt-3 rounded-xl p-3" style={{ background: '#FFF7ED', borderLeft: '3px solid #FFB347' }}>
+                  <p className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: '#B45309' }}>Impact</p>
+                  <p className="text-xs" style={{ color: '#374151' }}>{vuln.impact}</p>
+                </div>
+              )}
             </div>
-            {vuln.payload && (
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-wider mb-2 flex items-center gap-1"
-                   style={{ color: '#6B6B8A' }}>
-                  &lt;&gt; Payload utilisé
-                </p>
-                <pre className="rounded-xl px-4 py-3 text-xs font-mono overflow-x-auto leading-relaxed relative"
-                     style={{ background: '#1C1C2E', color: '#A8FFD8', minHeight: 80 }}>
-                  <span className="absolute top-2 right-3 text-[10px] uppercase tracking-wider opacity-40"
-                        style={{ color: '#A8FFD8' }}>PAYLOAD</span>
-                  {vuln.payload}
-                </pre>
-              </div>
-            )}
+            <div className="space-y-3">
+              {vuln.payload && (
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: '#6B6B8A' }}>
+                    Payload utilisé
+                  </p>
+                  <pre className="rounded-xl px-4 py-3 text-xs font-mono overflow-x-auto leading-relaxed"
+                       style={{ background: '#1C1C2E', color: '#A8FFD8' }}>
+                    {vuln.payload}
+                  </pre>
+                </div>
+              )}
+              {vuln.evidence && (
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: '#6B6B8A' }}>
+                    Preuve
+                  </p>
+                  <code className="block text-xs rounded-xl px-4 py-3 break-all"
+                        style={{ background: '#f0fdf4', color: '#065f46' }}>
+                    {vuln.evidence}
+                  </code>
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="rounded-xl p-4" style={{ background: '#E8FFFE', borderLeft: '3px solid #4ECDC4' }}>
@@ -106,9 +160,7 @@ function VulnCard({ vuln, open, onToggle }: {
                style={{ color: '#2A9D8F' }}>
               <CheckCircle2 size={13} /> Recommandation de remédiation
             </p>
-            <p className="text-sm leading-relaxed" style={{ color: '#1C1C2E' }}>
-              {vuln.recommendation}
-            </p>
+            <p className="text-sm leading-relaxed" style={{ color: '#1C1C2E' }}>{vuln.recommendation}</p>
           </div>
 
           {vuln.references && vuln.references.length > 0 && (
@@ -119,15 +171,9 @@ function VulnCard({ vuln, open, onToggle }: {
               <ul className="space-y-1.5">
                 {vuln.references.map(ref => (
                   <li key={ref}>
-                    <a
-                      href={ref}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1.5 text-xs font-medium transition-all"
-                      style={{ color: '#7C6FF7', textDecoration: 'none' }}
-                      onMouseEnter={e => (e.currentTarget.style.textDecoration = 'underline')}
-                      onMouseLeave={e => (e.currentTarget.style.textDecoration = 'none')}
-                    >
+                    <a href={ref} target="_blank" rel="noopener noreferrer"
+                       className="flex items-center gap-1.5 text-xs font-medium"
+                       style={{ color: '#7C6FF7' }}>
                       <ExternalLink size={11} style={{ flexShrink: 0 }} />
                       {ref}
                     </a>
@@ -136,10 +182,69 @@ function VulnCard({ vuln, open, onToggle }: {
               </ul>
             </div>
           )}
+
+          {/* ── Actions ── */}
+          <div className="flex items-center gap-2 flex-wrap pt-1" style={{ borderTop: '1px solid #F0EEFF' }}>
+            <button
+              onClick={() => updateVuln({ isResolved: !vuln.isResolved })}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+              style={vuln.isResolved
+                ? { background: '#dcfce7', color: '#16a34a', border: '1px solid #bbf7d0' }
+                : { background: '#f0fdf4', color: '#16a34a', border: '1px solid #dcfce7' }}>
+              <ShieldCheck size={12} />
+              {vuln.isResolved ? 'Résolu ✓' : 'Marquer résolu'}
+            </button>
+            <button
+              onClick={() => updateVuln({ isFalsePositive: !vuln.isFalsePositive })}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
+              style={vuln.isFalsePositive
+                ? { background: '#f3f4f6', color: '#6b7280', border: '1px solid #e5e7eb' }
+                : { background: '#fafafa', color: '#6b7280', border: '1px solid #e5e7eb' }}>
+              <Ban size={12} />
+              {vuln.isFalsePositive ? 'Faux positif ✓' : 'Faux positif'}
+            </button>
+          </div>
+
+          {/* Notes */}
+          <div>
+            <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider mb-1.5"
+                   style={{ color: '#6B6B8A' }}>
+              <MessageSquare size={11} /> Notes
+            </label>
+            <div className="relative">
+              <textarea
+                value={localNotes}
+                onChange={e => { setLocalNotes(e.target.value); setNotesDirty(true); }}
+                placeholder="Ajouter une note sur cette vulnérabilité..."
+                rows={2}
+                className="w-full text-sm rounded-xl px-3 py-2 outline-none resize-none"
+                style={{ border: '1px solid #EDE8FF', background: '#FAFAFA', color: '#1C1C2E' }}
+              />
+              {notesDirty && (
+                <button
+                  onClick={() => updateVuln({ notes: localNotes })}
+                  className="absolute bottom-2 right-2 px-2.5 py-1 rounded-lg text-[10px] font-semibold text-white"
+                  style={{ background: '#7C6FF7' }}>
+                  Sauvegarder
+                </button>
+              )}
+            </div>
+            {vuln.notes && !notesDirty && (
+              <p className="text-xs mt-1" style={{ color: '#6B6B8A' }}>Note : {vuln.notes}</p>
+            )}
+          </div>
         </div>
       )}
     </div>
   );
+}
+
+/* ── Risk score ──────────────────────────────────────────────────── */
+function calcRiskScore(stats: VulnStats | undefined): number {
+  if (!stats) return 0;
+  const raw = stats.critical * 10 + stats.high * 7 + stats.medium * 4 + stats.low * 1;
+  const max = stats.total * 10;
+  return max > 0 ? Math.min(100, Math.round((raw / max) * 100)) : 0;
 }
 
 /* ── Page ─────────────────────────────────────────────────────────── */
@@ -153,7 +258,13 @@ export default function ScanResultsPage() {
   const [sort,      setSort]      = useState<SortOption>('cvss_desc');
   const [openVuln,  setOpenVuln]  = useState<string | null>(null);
   const [page,      setPage]      = useState(1);
-  const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+  const [toast, setToast]         = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+  // Local vuln overrides (for immediate UI update after mutation)
+  const [vulnOverrides, setVulnOverrides] = useState<Record<string, Partial<Vulnerability>>>({});
+
+  const handleVulnUpdated = (id: string, data: Partial<Vulnerability>) => {
+    setVulnOverrides(prev => ({ ...prev, [id]: { ...(prev[id] ?? {}), ...data } }));
+  };
 
   const { data: scanData } = useQuery<{ data: { data: { targetUrl: string; status: string; startedAt: string; completedAt: string; moduleResults?: unknown[] } } }>({
     queryKey: ['scan', id],
@@ -205,6 +316,13 @@ export default function ScanResultsPage() {
     onError: () => setToast({ msg: 'Erreur lors de la génération', type: 'error' }),
   });
 
+  const handleExportJSON = () => window.open(`/api/scans/${id}/export/json`, '_blank');
+  const handleExportCSV  = () => window.open(`/api/scans/${id}/export/csv`,  '_blank');
+
+  const riskScore = calcRiskScore(stats);
+  const riskColor = riskScore >= 80 ? '#FF6B6B' : riskScore >= 60 ? '#FFB347' : riskScore >= 40 ? '#7C6FF7' : '#4ECDC4';
+  const riskLabel = riskScore >= 80 ? 'CRITIQUE' : riskScore >= 60 ? 'ÉLEVÉ' : riskScore >= 40 ? 'MOYEN' : riskScore > 0 ? 'FAIBLE' : 'MINIMAL';
+
   const totalVulns = (stats?.critical ?? 0) + (stats?.high ?? 0) + (stats?.medium ?? 0) + (stats?.low ?? 0);
 
   const FILTER_TABS = [
@@ -248,6 +366,16 @@ export default function ScanResultsPage() {
           >
             <RefreshCw size={14} /> Relancer
           </button>
+          <button onClick={handleExportJSON}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-all"
+                  style={{ border: '1px solid #EDE8FF', color: '#7C6FF7' }}>
+            <FileJson size={14} /> JSON
+          </button>
+          <button onClick={handleExportCSV}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-all"
+                  style={{ border: '1px solid #EDE8FF', color: '#4ECDC4' }}>
+            <FileText size={14} /> CSV
+          </button>
           <button
             onClick={() => generatePDF()}
             disabled={generating}
@@ -255,7 +383,7 @@ export default function ScanResultsPage() {
             style={{ background: '#7C6FF7' }}
           >
             <Download size={14} />
-            {generating ? 'Génération…' : 'Exporter PDF'}
+            {generating ? 'Génération…' : 'Rapport PDF'}
           </button>
         </div>
       </div>
@@ -284,7 +412,18 @@ export default function ScanResultsPage() {
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-4">
+              {/* Risk score */}
+              {stats && stats.total > 0 && (
+                <div className="text-center px-4 py-2 rounded-xl"
+                     style={{ background: `${riskColor}15`, border: `1px solid ${riskColor}30` }}>
+                  <p className="font-mono font-black text-2xl" style={{ color: riskColor }}>{riskScore}</p>
+                  <p className="text-[9px] font-bold uppercase tracking-wide" style={{ color: riskColor }}>
+                    Risque {riskLabel}
+                  </p>
+                </div>
+              )}
+              {/* Severity counts */}
               {[
                 { key: 'critical', count: stats?.critical ?? 0, color: '#FF6B6B', label: 'CRITIQUE' },
                 { key: 'high',     count: stats?.high     ?? 0, color: '#FFB347', label: 'HAUTE'    },
@@ -368,9 +507,10 @@ export default function ScanResultsPage() {
               {vulns.map(vuln => (
                 <VulnCard
                   key={vuln.id}
-                  vuln={vuln}
+                  vuln={{ ...vuln, ...(vulnOverrides[vuln.id] ?? {}) }}
                   open={openVuln === vuln.id}
                   onToggle={() => setOpenVuln(openVuln === vuln.id ? null : vuln.id)}
+                  onUpdated={handleVulnUpdated}
                 />
               ))}
             </div>

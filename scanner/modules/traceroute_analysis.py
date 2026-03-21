@@ -95,18 +95,21 @@ class Module(BaseModule):
 
             # Report findings
             if hop_count > 0:
-                severity = "LOW" if hop_count <= 10 else "LOW"
                 vulns.append(self.vuln(
                     name=f"Analyse réseau : {hop_count} hops vers la cible",
                     severity="LOW",
                     cvss_score=3.0,
+                    cvss_vector="AV:N/AC:H/PR:N/UI:N/S:U/C:L/I:N/A:N",
+                    cwe_id="CWE-200",
                     endpoint=host,
                     description=(
                         f"Le traceroute vers '{host}' a révélé {hop_count} saut(s) réseau. "
-                        f"{f'Des adresses IP privées ont été détectées dans le chemin : {», «.join(private_hops[:3])}. ' if private_hops else ''}"
+                        f"{f'Des adresses IP privées ont été détectées dans le chemin : {chr(44).join(private_hops[:3])}. ' if private_hops else ''}"
                         f"{f'{timeout_count} hop(s) ont refusé de répondre (firewall/ACL). ' if timeout_count > 3 else ''}"
                         "Ces informations permettent de cartographier l'infrastructure réseau."
                     ),
+                    impact="Cartographie réseau facilitée, identification des équipements intermédiaires.",
+                    evidence=f"Traceroute vers '{host}' : {hop_count} hops détectés.",
                     recommendation=(
                         "Configurer les équipements réseau pour ne pas répondre aux paquets ICMP TTL-Exceeded. "
                         "Filtrer les réponses ICMP aux seuls équipements nécessaires. "
@@ -120,12 +123,16 @@ class Module(BaseModule):
                     name="Adresses IP privées exposées dans le chemin réseau",
                     severity="LOW",
                     cvss_score=3.0,
+                    cvss_vector="AV:N/AC:H/PR:N/UI:N/S:U/C:L/I:N/A:N",
+                    cwe_id="CWE-200",
                     endpoint=host,
                     description=(
                         f"Des adresses IP privées (RFC1918) ont été révélées dans le traceroute : "
                         f"{', '.join(set(private_hops)[:5])}. "
                         "Cela expose la topologie du réseau interne."
                     ),
+                    impact="Exposition de la topologie réseau interne, facilite les attaques ciblées.",
+                    evidence=f"IPs privées RFC1918 visibles dans le traceroute : {', '.join(set(private_hops)[:5])}.",
                     recommendation=(
                         "Configurer le NAT pour masquer les adresses internes. "
                         "Désactiver les réponses ICMP TTL-Exceeded sur les équipements internes. "

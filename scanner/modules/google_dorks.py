@@ -100,12 +100,16 @@ class GoogleDorks(BaseModule):
                         name=f"Dork : {label}",
                         severity=final_sev,
                         cvss_score=final_cvss,
+                        cvss_vector="AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N" if final_sev == "CRITICAL" else "AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N",
+                        cwe_id="CWE-200",
                         endpoint=domain,
                         description=(
                             f"La requête « {query} » retourne des résultats indexés. "
                             f"URLs trouvées : {', '.join(results[:3])}. "
                             "Ces informations sont publiquement accessibles via les moteurs de recherche."
                         ),
+                        impact="Exposition publique de fichiers sensibles, credentials ou interfaces d'administration indexés.",
+                        evidence=f"Dork « {query} » retourne {len(results)} résultat(s) : {', '.join(results[:3])}.",
                         recommendation=(
                             "Ajoutez un fichier robots.txt restrictif. "
                             "Utilisez des balises <meta name='robots' content='noindex'> sur les pages sensibles. "

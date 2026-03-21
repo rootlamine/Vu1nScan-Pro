@@ -89,6 +89,8 @@ class Module(BaseModule):
                         name="Path Traversal détecté",
                         severity="HIGH",
                         cvss_score=7.5,
+                        cvss_vector="AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+                        cwe_id="CWE-22",
                         endpoint=vuln_url or url,
                         parameter=param,
                         payload=payload,
@@ -96,6 +98,8 @@ class Module(BaseModule):
                             f"Le paramètre '{param}' est vulnérable au Path Traversal. "
                             "Un attaquant peut lire des fichiers système arbitraires du serveur."
                         ),
+                        impact="Lecture de fichiers système (/etc/passwd, clés SSH, configs), fuite d'informations sensibles.",
+                        evidence=f"Payload '{payload}' a retourné des signatures de fichiers système dans la réponse.",
                         recommendation=(
                             "Valider et assainir tous les chemins de fichiers. "
                             "Utiliser une liste blanche de chemins autorisés. "

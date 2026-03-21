@@ -92,6 +92,8 @@ class Module(BaseModule):
                                 name="Local File Inclusion (LFI) détecté",
                                 severity="CRITICAL",
                                 cvss_score=9.0,
+                                cvss_vector="AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:L/A:L",
+                                cwe_id="CWE-22",
                                 endpoint=url,
                                 parameter=param,
                                 payload=payload,
@@ -99,6 +101,8 @@ class Module(BaseModule):
                                     f"Le paramètre '{param}' est vulnérable à l'inclusion de fichiers locaux. "
                                     f"Le payload '{payload}' a permis de lire des fichiers système sensibles."
                                 ),
+                                impact="Lecture de fichiers sensibles (/etc/passwd, clés SSH, configs), exécution de code via log poisoning.",
+                                evidence=f"Contenu de /etc/passwd ou /etc/shadow détecté dans la réponse avec le payload: {payload}",
                                 recommendation=(
                                     "Ne jamais passer de chemins de fichiers via les paramètres utilisateur. "
                                     "Utiliser un whitelist de fichiers autorisés. "
