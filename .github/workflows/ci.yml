@@ -12,32 +12,32 @@ jobs:
     name: Backend (lint · build · unit tests)
     runs-on: ubuntu-latest
 
-    defaults:
-      run:
-        working-directory: backend
-
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
-          cache-dependency-path: backend/package-lock.json
+          cache-dependency-path: package-lock.json
 
-      - name: Install dependencies
+      - name: Install dependencies (workspaces)
         run: npm ci
 
       - name: Generate Prisma client
+        working-directory: backend
         run: npx prisma generate
 
       - name: ESLint
+        working-directory: backend
         run: npx eslint src --ext .ts --max-warnings 0
 
       - name: TypeScript build
+        working-directory: backend
         run: npm run build
 
       - name: Unit tests
+        working-directory: backend
         run: npm test -- tests/unit
         env:
           NODE_ENV: test
@@ -47,23 +47,20 @@ jobs:
     name: Frontend (typecheck · build)
     runs-on: ubuntu-latest
 
-    defaults:
-      run:
-        working-directory: frontend
-
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
-          cache-dependency-path: frontend/package-lock.json
+          cache-dependency-path: package-lock.json
 
-      - name: Install dependencies
+      - name: Install dependencies (workspaces)
         run: npm ci
 
       - name: TypeScript + Vite build
+        working-directory: frontend
         run: npm run build
 
   # ─── Scanner Python : vérification syntaxique ───────────────────────────
