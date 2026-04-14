@@ -21,7 +21,7 @@ export async function getDashboardStats(req: Request, res: Response, next: NextF
       recentScans, prevWeekScans,
       recentVulns, prevWeekVulns,
       last30DaysScans,
-      vulnBySeverity, allVulns,
+      vulnBySeverity,
       moduleResults,
     ] = await Promise.all([
       // KPIs
@@ -45,12 +45,6 @@ export async function getDashboardStats(req: Request, res: Response, next: NextF
         by: ['severity'],
         where: { scan: userFilter },
         _count: { _all: true },
-      }),
-      // Toutes les vulns (pour catégories)
-      prisma.vulnerability.findMany({
-        where:   { scan: userFilter },
-        select:  { severity: true, cvssScore: true },
-        take:    1000,
       }),
       // Résultats modules
       prisma.scanModuleResult.findMany({

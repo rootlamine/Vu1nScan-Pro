@@ -57,7 +57,7 @@ export class AdminService {
     const users = await adminRepo.findAllUsers();
     const user = users.find(u => u.id === userId);
     if (!user) throw new AppError('Utilisateur introuvable', 404);
-    return permService.resetToDefault(userId, (user as any).role === 'ADMIN');
+    return permService.resetToDefault(userId, user.role === 'ADMIN');
   }
 
   async getUserStats(userId: string) {

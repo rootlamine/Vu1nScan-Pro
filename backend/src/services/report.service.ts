@@ -280,7 +280,6 @@ function buildHtml(scan: ScanWithModules, vulns: Vulnerability[]): string {
     </thead>
     <tbody>
       ${moduleResults.map(r => {
-        const modVulns = vulns.filter(() => false); // filled statically
         const statusColor = r.status === 'DONE' ? '#16a34a' : r.status === 'ERROR' ? '#dc2626' : '#6b7280';
         return `<tr>
           <td><strong>${r.module.name}</strong></td>
