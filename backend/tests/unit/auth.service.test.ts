@@ -22,6 +22,14 @@ vi.mock('@/utils/config', () => ({
   },
 }));
 
+vi.mock('@/services/permission.service', () => ({
+  PermissionService: vi.fn().mockImplementation(() => ({
+    createDefaultPermissions: vi.fn().mockResolvedValue(undefined),
+    checkScanPermissions:     vi.fn().mockResolvedValue(undefined),
+    getPermissions:           vi.fn().mockResolvedValue({ blockedModules: [] }),
+  })),
+}));
+
 describe('AuthService', () => {
   let service: AuthService;
 

@@ -28,6 +28,13 @@ vi.mock('@/jobs/scan-queue', () => ({
   addScanJob: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock('@/services/permission.service', () => ({
+  PermissionService: vi.fn().mockImplementation(() => ({
+    checkScanPermissions: vi.fn().mockResolvedValue(undefined),
+    getPermissions:       vi.fn().mockResolvedValue({ blockedModules: [] }),
+  })),
+}));
+
 describe('ScanService', () => {
   let service: ScanService;
 
@@ -51,7 +58,7 @@ describe('ScanService', () => {
       mockModRepo.createModuleResults.mockResolvedValue(undefined);
       mockScanRepo.findById.mockResolvedValue({ ...fakeScan, moduleResults: [] });
 
-      const result = await service.createScan('user-1', {
+      const result = await service.createScan('user-1', 'USER', {
         targetUrl: 'http://example.com',
         depth:     'normal',
       });
@@ -66,7 +73,7 @@ describe('ScanService', () => {
       mockModRepo.findAllActive.mockResolvedValue([]);
 
       await expect(
-        service.createScan('user-1', { targetUrl: 'http://example.com' }),
+        service.createScan('user-1', 'USER', { targetUrl: 'http://example.com' }),
       ).rejects.toMatchObject({ statusCode: 503 });
     });
   });

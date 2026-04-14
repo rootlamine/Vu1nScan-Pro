@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import request from 'supertest';
 import app from '../../src/index';
+import '../setup';
 
 describe('POST /api/auth/register', () => {
   it('201 — crée un compte et retourne un token', async () => {
